@@ -4,7 +4,7 @@
 
 // Macro constants (prefix k & CamelCase)
 `define kTotalBits 31
-  
+
 `define kItemBits 8
 `define kNumItems 4
 
