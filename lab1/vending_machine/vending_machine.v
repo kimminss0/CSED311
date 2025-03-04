@@ -11,7 +11,7 @@ module vending_machine (
 
     i_input_coin,  // coin is inserted.
     i_select_item,  // item is selected.
-    i_trigger_return,  // change-return is triggered 
+    i_trigger_return,  // change-return is triggered
 
     o_available_item,  // Sign of the item availability
     o_output_item,  // Sign of the item withdrawal
@@ -33,8 +33,8 @@ module vending_machine (
 
 
   // Do not modify the values.
-  wire [`kTotalBits-1:0] item_price[`kNumItems-1:0];  // Price of each item
-  wire [`kTotalBits-1:0] coin_value[`kNumCoins-1:0];  // Value of each coin
+  wire [`kTotalBits-1:0] item_price[`kNumItems];  // Price of each item
+  wire [`kTotalBits-1:0] coin_value[`kNumCoins];  // Value of each coin
   assign item_price[0] = 400;
   assign item_price[1] = 500;
   assign item_price[2] = 1000;
@@ -46,14 +46,10 @@ module vending_machine (
   // Internal states. You may add your own net variables.
   wire [`kTotalBits-1:0] current_total, wait_time;
 
-  // Next internal states. You may add your own net variables.
-  wire [`kTotalBits-1:0] current_total_nxt, wait_time_nxt;
-
-
   // Variables. You may add more your own net variables.
-  wire [`kNumItems-1:0] available_item_1, output_item_1;
+  wire [`kNumItems-1:0] available_item_1, output_item_nxt;
   wire [`kNumCoins-1:0] return_coin_1;
-  wire [`kTotalBits-1:0] current_total_nxt_1;
+  wire [`kTotalBits-1:0] current_total_nxt;
   wire return_changes;
 
   // This module interface, structure, and given a number of modules are not mandatory but recommended.
@@ -63,42 +59,34 @@ module vending_machine (
       .i_select_item(i_select_item),
       .current_total(current_total),
       .available_item_1(available_item_1),
-      .output_item_1(output_item_1),
+      .output_item_nxt(output_item_nxt),
       .return_coin_1(return_coin_1),
-      .current_total_nxt_1(current_total_nxt_1),
+      .current_total_nxt(current_total_nxt),
       .item_price(item_price),
       .coin_value(coin_value)
   );
 
   calculate_return_and_wait_time calculate_return_and_wait_time_module (
+      .clk(clk),
+      .reset_n(reset_n),
       .wait_time(wait_time),
       .i_trigger_return(i_trigger_return),
       .i_input_coin(i_input_coin),
-      .output_item_1(output_item_1),
-      .wait_time_nxt(wait_time_nxt),
+      .output_item_nxt(output_item_nxt),
       .return_changes(return_changes)
   );
 
   regularize_output regularize_output_module (
+      .clk(clk),
+      .reset_n(reset_n),
       .available_item_1(available_item_1),
-      .output_item_1(output_item_1),
+      .output_item_nxt(output_item_nxt),
       .return_coin_1(return_coin_1),
-      .current_total_nxt_1(current_total_nxt_1),
+      .current_total_nxt(current_total_nxt),
       .return_changes(return_changes),
       .o_available_item(o_available_item),
       .o_output_item(o_output_item),
       .o_return_coin(o_return_coin),
-      .current_total_nxt(current_total_nxt),
-      .clk(clk),
-      .reset_n(reset_n)
-  );
-
-  change_state change_state_module (
-      .clk(clk),
-      .reset_n(reset_n),
-      .current_total_nxt(current_total_nxt),
-      .current_total(current_total),
-      .wait_time_nxt(wait_time_nxt),
-      .wait_time(wait_time)
+      .current_total(current_total)
   );
 endmodule
