@@ -25,11 +25,8 @@ module regularize_output (
   output reg [`kNumCoins-1:0] o_return_coin;
   output reg [`kTotalBits-1:0] current_total;
 
-  reg reset_current_total;
-
   initial begin
     o_output_item = 0;
-    reset_current_total = 1;
     current_total = 0;
   end
 
@@ -49,24 +46,9 @@ module regularize_output (
     if (!reset_n) begin
       o_output_item <= 0;
       current_total <= 0;
-      reset_current_total = 1;  // blocking assignment is inevitable
     end else begin
-      if (return_changes) begin
-        o_output_item <= 0;
-        current_total <= reset_current_total ? 0 : current_total_nxt;
-      end else begin
-        o_output_item <= output_item_nxt;
-        current_total <= current_total_nxt;
-      end
+      o_output_item <= return_changes ? 0 : output_item_nxt;
+      current_total <= current_total_nxt;
     end
-  end
-
-  // reset current_total at the negedge of return_changes
-  always @(posedge return_changes) begin
-    reset_current_total = 0;
-  end
-
-  always @(negedge return_changes) begin
-    reset_current_total = 1;
   end
 endmodule
