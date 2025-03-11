@@ -12,8 +12,9 @@ module cpu (
     input         reset,         // positive reset signal
     input         clk,           // clock signal
     output        is_halted,     // Whehther to finish simulation
-    output [31:0] print_reg[32]
-);  // TO PRINT REGISTER VALUES IN TESTBENCH (YOU SHOULD NOT USE THIS)
+    output [31:0] print_reg[32]  // TO PRINT REGISTER VALUES IN TESTBENCH
+                                 // (YOU SHOULD NOT USE THIS)
+);
   /***** Wire declarations *****/
 
   /***** Register declarations *****/

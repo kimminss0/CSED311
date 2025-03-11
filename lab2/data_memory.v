@@ -7,8 +7,8 @@ module data_memory #(
     input  [31:0] din,        // data to be written
     input         mem_read,   // is read signal driven?
     input         mem_write,  // is write signal driven?
-    output [31:0] dout
-);  // output of the data memory at addr
+    output [31:0] dout        // output of the data memory at addr
+);
   integer i;
   // Data memory
   reg [31:0] mem[MEM_DEPTH];

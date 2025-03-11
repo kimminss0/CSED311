@@ -4,8 +4,8 @@ module instruction_memory #(
     input reset,
     input clk,
     input [31:0] addr,  // address of the instruction memory
-    output [31:0] dout
-);  // instruction at addr
+    output [31:0] dout  // instruction at addr
+);
   integer i;
   // Instruction memory
   reg [31:0] mem[MEM_DEPTH];
