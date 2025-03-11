@@ -1,3 +1,4 @@
+/* verilog_format: off */
 // The constants below are from riscv spec
 // Please do not change the values
 
@@ -41,3 +42,4 @@
 // FUNCT7
 `define FUNCT7_SUB      7'b0100000
 `define FUNCT7_OTHERS   7'b0000000
+/* verilog_format: off */
