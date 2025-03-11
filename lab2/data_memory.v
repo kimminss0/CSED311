@@ -1,5 +1,5 @@
 module data_memory #(
-    parameter MEM_DEPTH = 16384
+    parameter integer MEM_DEPTH = 16384
 ) (
     input         reset,
     input         clk,
@@ -11,7 +11,7 @@ module data_memory #(
 );  // output of the data memory at addr
   integer i;
   // Data memory
-  reg [31:0] mem[0:MEM_DEPTH - 1];
+  reg [31:0] mem[MEM_DEPTH];
   // Do not touch dmem_addr
   wire [13:0] dmem_addr;
   assign dmem_addr = addr[15:2];

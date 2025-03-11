@@ -9,10 +9,10 @@
 // 4. `include files if required
 
 module cpu (
-    input         reset,           // positive reset signal
-    input         clk,             // clock signal
-    output        is_halted,       // Whehther to finish simulation
-    output [31:0] print_reg[0:31]
+    input         reset,         // positive reset signal
+    input         clk,           // clock signal
+    output        is_halted,     // Whehther to finish simulation
+    output [31:0] print_reg[32]
 );  // TO PRINT REGISTER VALUES IN TESTBENCH (YOU SHOULD NOT USE THIS)
   /***** Wire declarations *****/
 
@@ -80,7 +80,7 @@ module cpu (
   // ---------- ALU ----------
   alu alu (
       .alu_op    (),  // input
-      .alu_in_1  (),  // input  
+      .alu_in_1  (),  // input
       .alu_in_2  (),  // input
       .alu_result(),  // output
       .alu_bcond ()   // output

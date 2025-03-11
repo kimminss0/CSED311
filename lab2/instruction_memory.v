@@ -1,5 +1,5 @@
 module instruction_memory #(
-    parameter MEM_DEPTH = 1024
+    parameter integer MEM_DEPTH = 1024
 ) (
     input reset,
     input clk,
@@ -8,7 +8,7 @@ module instruction_memory #(
 );  // instruction at addr
   integer i;
   // Instruction memory
-  reg [31:0] mem[0:MEM_DEPTH - 1];
+  reg [31:0] mem[MEM_DEPTH];
   // Do not touch imem_addr
   wire [9:0] imem_addr;
   assign imem_addr = addr[11:2];
@@ -16,7 +16,7 @@ module instruction_memory #(
   wire _unused_ok = &{1'b0, addr[31:12], addr[1:0], 1'b0};
 
   // TODO
-  // Asynchronously read instruction from the memory 
+  // Asynchronously read instruction from the memory
   // (use imem_addr to access memory)
 
   // Initialize instruction memory (do not touch except path)

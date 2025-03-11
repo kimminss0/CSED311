@@ -3,7 +3,7 @@ module top (
     input reset,
     input clk,
     output is_halted,
-    output [31:0] print_reg[0:31]
+    output [31:0] print_reg[32]
 );
 
   cpu cpu (
