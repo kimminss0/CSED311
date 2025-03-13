@@ -16,6 +16,31 @@ module cpu (
                                  // (YOU SHOULD NOT USE THIS)
 );
   /***** Wire declarations *****/
+  //data wire
+  wire [31:0] pc, pc_add_4, pc_add_imm, pc_jal, next_pc;
+  wire [31:0] instruction;
+  wire [31:0] imm, rs1_output, rs2_output, rs2_or_imm;
+  wire [31:0] alu_result, mem_output;
+  wire [31:0] write_back_data, write_data;
+
+  //signal wire
+  wire is_jal, is_jalr, branch;
+  wire mem_read, mem_to_reg, mem_write;
+  wire alu_src, write_enable, pc_to_reg, is_ecall;
+
+  wire alu_bcond, signal_pc_4_imm;
+
+  /* 정의 */
+  assign pc_add_4 = pc + 4;
+  assign pc_add_imm = pc + imm;
+
+  //mux making pc_jal
+  //mux making next_pc
+  //mux making rs2_or_imm
+
+  assign signal_pc_4_imm = is_jal | (branch & alu_bcond);
+
+
 
   /***** Register declarations *****/
 
