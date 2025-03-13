@@ -15,9 +15,18 @@ module instruction_memory #(
   // Do not touch or use this wire
   wire _unused_ok = &{1'b0, addr[31:12], addr[1:0], 1'b0};
 
+  // 현실적인 구현은 mux로 라인을 선택하겠지만 편의상 reg를 씀
+  initial begin
+    dout = 0;
+  end
+
+
   // TODO
   // Asynchronously read instruction from the memory
   // (use imem_addr to access memory)
+  always @(addr) begin
+    dout = mem[addr];
+  end
 
   // Initialize instruction memory (do not touch except path)
   always @(posedge clk) begin
