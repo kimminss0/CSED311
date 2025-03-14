@@ -4,7 +4,7 @@ module instruction_memory #(
     input reset,
     input clk,
     input [31:0] addr,  // address of the instruction memory
-    output [31:0] dout  // instruction at addr
+    output reg [31:0] dout  // instruction at addr
 );
   integer i;
   // Instruction memory
@@ -14,12 +14,6 @@ module instruction_memory #(
   assign imem_addr = addr[11:2];
   // Do not touch or use this wire
   wire _unused_ok = &{1'b0, addr[31:12], addr[1:0], 1'b0};
-
-  // 현실적인 구현은 mux로 라인을 선택하겠지만 편의상 reg를 씀
-  initial begin
-    dout = 0;
-  end
-
 
   // TODO
   // Asynchronously read instruction from the memory

@@ -10,3 +10,4 @@
 `define OR    4'b1000
 `define AND   4'b1001
 `define SRL   4'b1010
+

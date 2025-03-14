@@ -7,7 +7,7 @@ module data_memory #(
     input  [31:0] din,        // data to be written
     input         mem_read,   // is read signal driven?
     input         mem_write,  // is write signal driven?
-    output [31:0] dout        // output of the data memory at addr
+    output reg [31:0] dout        // output of the data memory at addr
 );
   integer i;
   // Data memory
@@ -18,16 +18,11 @@ module data_memory #(
   // Do not touch or use _unused_ok
   wire _unused_ok = &{1'b0, addr[31:16], addr[1:0], 1'b0};
 
-  // 현실적인 구현은 mux로 라인을 선택하겠지만 편의상 reg를 씀
-  initial begin
-    dout = 0;
-  end
-
   // TODO
   // Asynchrnously read data from the memory
-  // mem이 있어야 하나?
-  always @(mem_read, addr, mem) begin
+  always @(*) begin
     if (mem_read) dout = mem[addr];
+    else dout = 0;
   end
 
   // Synchronously write data to the memory
