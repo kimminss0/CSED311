@@ -30,17 +30,47 @@ module cpu (
 
   wire alu_bcond, signal_pc_4_imm;
 
-  /* 정의 */
+  //pc+4와 pc+imm의 slect signal, JAL과 BRANCH에서 발생
+  assign signal_pc_4_imm = is_jal | (branch & alu_bcond);
+
+  // two adders
   assign pc_add_4 = pc + 4;
   assign pc_add_imm = pc + imm;
 
-  //mux making pc_jal
-  //mux making next_pc
-  //mux making rs2_or_imm
+  // five mux
+  mux32 mux_pc_4_imm (
+      .select(signal_pc_4_imm),
+      .w0(pc_add_4),
+      .w1(pc_add_imm),
+      .dout(pc_jal)
+  );
+  mux32 mux_jal_alu (
+      .select(is_jalr),
+      .w0(pc_jal),
+      .w1(alu_result),
+      .dout(next_pc)
+  );
 
-  assign signal_pc_4_imm = is_jal | (branch & alu_bcond);
+  mux32 mux_rs2_imm (
+      .select(alu_src),
+      .w0(rs2_output),
+      .w1(imm),
+      .dout(rs2_or_imm)
+  );
 
+  mux32 mux_alu_mem (
+      .select(mem_to_reg),
+      .w0(alu_result),
+      .w1(mem_output),
+      .dout(write_back_data)
+  );
 
+  mux32 mux_write_back (
+      .select(pc_to_reg),
+      .w0(write_back_data),
+      .w1(pc_add_4),
+      .dout(write_data)
+  );
 
   /***** Register declarations *****/
 
