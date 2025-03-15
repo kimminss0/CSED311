@@ -30,31 +30,31 @@ module control_unit (
     is_ecall = 0;
   end
 
-  always @(part_of_inst) begin
+  always @(*) begin
     //is_jal
-    is_jal = (opcode == `JAL) ? 0 : 1;
+    is_jal = (opcode == `JAL) ? 1 : 0;
 
     //is_jalr
-    is_jalr = (opcode == `JALR) ? 0 : 1;
+    is_jalr = (opcode == `JALR) ? 1 : 0;
 
     //branch
-    branch = (opcode == `BRANCH) ? 0 : 1;
+    branch = (opcode == `BRANCH) ? 1 : 0;
 
     //mem_~
-    mem_read = (opcode == `LOAD) ? 0 : 1;
-    mem_to_reg = (opcode == `LOAD) ? 0 : 1;
-    mem_write = (opcode == `STORE) ? 0 : 1;
+    mem_read = (opcode == `LOAD) ? 1 : 0;
+    mem_to_reg = (opcode == `LOAD) ? 1 : 0;
+    mem_write = (opcode == `STORE) ? 1 : 0;
 
     //alu_src : zero -> src is register; one -> imm gen;
     case (opcode)
-      `JAL, `JALR, `BRANCH, `LOAD, `STORE, `ARITHMETIC_IMM: alu_src = 1;
-      default: alu_src = 0;
+      `BRANCH, `ARITHMETIC: alu_src = 0;
+      default: alu_src = 1;
     endcase
 
     //write_enable
     case (opcode)
-      `JAL, `JALR, `LOAD, `ARITHMETIC, `ARITHMETIC_IMM: write_enable = 1;
-      default: write_enable = 0;
+      `BRANCH, `STORE: write_enable = 0;
+      default: write_enable = 1;
     endcase
 
     //pc_to_reg : zero -> normal , one -> PC+4 to register write input
@@ -64,7 +64,7 @@ module control_unit (
     endcase
 
     //is_ecall
-    is_ecall = (opcode == `ECALL) ? 0 : 1;
+    is_ecall = (opcode == `ECALL) ? 1 : 0;
   end
 
 

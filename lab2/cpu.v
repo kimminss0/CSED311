@@ -90,10 +90,10 @@ module cpu (
 
   // ---------- Instruction Memory ----------
   instruction_memory imem (
-      .reset(reset),  // input
-      .clk(clk),  // input
-      .addr(current_pc),  // input
-      .dout(instruction)  // output
+      .reset(reset),       // input
+      .clk  (clk),         // input
+      .addr (current_pc),  // input
+      .dout (instruction)  // output
   );
 
   // ---------- Register File ----------
@@ -129,7 +129,7 @@ module cpu (
   // ---------- Immediate Generator ----------
   immediate_generator imm_gen (
       .part_of_inst(instruction),  // input
-      .imm_gen_out(imm)  // output
+      .imm_gen_out (imm)           // output
   );
 
   // ---------- ALU Control Unit ----------

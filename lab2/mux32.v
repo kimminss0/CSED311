@@ -5,6 +5,6 @@ module mux32 (
     output [31:0] dout
 );
 
-  assign dout = ({32{select}} & w0) | ({32{!select}} & w1);
+  assign dout = ({32{!select}} & w0) | ({32{select}} & w1);
 
 endmodule
