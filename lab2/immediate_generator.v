@@ -28,9 +28,9 @@ module immediate_generator (
 
       `BRANCH: begin
         imm_gen_out[0]    = 1'b0;
-        imm_gen_out[11]   = part_of_inst[8];
-        imm_gen_out[4:1]  = part_of_inst[12:9];
-        imm_gen_out[10:5] = part_of_inst[31:26];
+        imm_gen_out[11]   = part_of_inst[7];
+        imm_gen_out[4:1]  = part_of_inst[11:8];
+        imm_gen_out[10:5] = part_of_inst[30:25];
         imm_gen_out[12]   = part_of_inst[31];
 
         //sign-extend
