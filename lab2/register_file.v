@@ -26,8 +26,10 @@ module register_file (
 
   // Synchronously write data to the register file
   always @(posedge clk) begin
-    if (write_enable) begin
-      rf[rd] <= rd_din;
+    if (!reset) begin
+      if (write_enable) begin
+        rf[rd] <= rd_din;
+      end
     end
   end
 

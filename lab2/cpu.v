@@ -100,8 +100,8 @@ module cpu (
   register_file reg_file (
       .reset       (reset),               // input
       .clk         (clk),                 // input
-      .rs1         (instruction[24:20]),  // input
-      .rs2         (instruction[19:15]),  // input
+      .rs1         (instruction[19:15]),  // input
+      .rs2         (instruction[24:20]),  // input
       .rd          (instruction[11:7]),   // input
       .rd_din      (write_data),          // input
       .write_enable(write_enable),        // input
