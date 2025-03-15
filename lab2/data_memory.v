@@ -1,12 +1,12 @@
 module data_memory #(
     parameter integer MEM_DEPTH = 16384
 ) (
-    input         reset,
-    input         clk,
-    input  [31:0] addr,       // address of the data memory
-    input  [31:0] din,        // data to be written
-    input         mem_read,   // is read signal driven?
-    input         mem_write,  // is write signal driven?
+    input             reset,
+    input             clk,
+    input      [31:0] addr,       // address of the data memory
+    input      [31:0] din,        // data to be written
+    input             mem_read,   // is read signal driven?
+    input             mem_write,  // is write signal driven?
     output reg [31:0] dout        // output of the data memory at addr
 );
   integer i;
@@ -21,14 +21,13 @@ module data_memory #(
   // TODO
   // Asynchrnously read data from the memory
   always @(*) begin
-    if (mem_read) dout = mem[addr];
-    else dout = 0;
+    dout = mem_read ? mem[dmem_addr] : 0;
   end
 
   // Synchronously write data to the memory
   always @(posedge clk) begin
     if (mem_write) begin
-      mem[addr] <= din;
+      mem[dmem_addr] <= din;
     end
   end
   // (use dmem_addr to access memory)

@@ -34,9 +34,12 @@ module cpu (
   //pc+4와 pc+imm의 slect signal, JAL과 BRANCH에서 발생
   assign signal_pc_4_imm = is_jal | (branch & alu_bcond);
 
+  // TODO: Implement
+  assign is_halted = is_ecall ? 0 : 0;
+
   // two adders
-  assign pc_add_4 = pc + 4;
-  assign pc_add_imm = pc + imm;
+  assign pc_add_4 = current_pc + 4;
+  assign pc_add_imm = current_pc + imm;
 
   // five mux
   mux32 mux_pc_4_imm (
@@ -79,79 +82,79 @@ module cpu (
   // ---------- Update program counter ----------
   // PC must be updated on the rising edge (positive edge) of the clock.
   pc pc_ (
-      .reset     (reset),  // input (Use reset to initialize PC. Initial value must be 0)
-      .clk       (clk),  // input
-      .next_pc   (next_pc),  // input
-      .current_pc(current_pc)   // output
+      .reset     (reset),      // input (Use reset to initialize PC. Initial value must be 0)
+      .clk       (clk),        // input
+      .next_pc   (next_pc),    // input
+      .current_pc(current_pc)  // output
   );
 
   // ---------- Instruction Memory ----------
   instruction_memory imem (
       .reset(reset),  // input
-      .clk  (clk),  // input
-      .addr (current_pc),  // input
-      .dout (instruction)   // output
+      .clk(clk),  // input
+      .addr(current_pc),  // input
+      .dout(instruction)  // output
   );
 
   // ---------- Register File ----------
   register_file reg_file (
-      .reset       (reset),          // input
-      .clk         (clk),          // input
-      .rs1         (instruction[20:25]),          // input
-      .rs2         (instruction[15:19]),          // input
-      .rd          (instruction[7:11]),          // input
+      .reset       (reset),               // input
+      .clk         (clk),                 // input
+      .rs1         (instruction[24:20]),  // input
+      .rs2         (instruction[19:15]),  // input
+      .rd          (instruction[11:7]),   // input
       .rd_din      (write_data),          // input
-      .write_enable(write_enable),          // input
+      .write_enable(write_enable),        // input
       .rs1_dout    (rs1_output),          // output
       .rs2_dout    (rs2_output),          // output
-      .print_reg   (print_reg)  //DO NOT TOUCH THIS
+      .print_reg   (print_reg)            //DO NOT TOUCH THIS
   );
 
 
   // ---------- Control Unit ----------
   control_unit ctrl_unit (
       .part_of_inst(instruction[6:0]),  // input
-      .is_jal      (is_jal),  // output
-      .is_jalr     (is_jalr),  // output
-      .branch      (branch),  // output
-      .mem_read    (mem_read),  // output
-      .mem_to_reg  (mem_to_reg),  // output
-      .mem_write   (mem_write),  // output
-      .alu_src     (alu_src),  // output
-      .write_enable(write_enable),  // output
-      .pc_to_reg   (pc_to_reg),  // output
-      .is_ecall    (is_ecall)   // output (ecall inst)
+      .is_jal      (is_jal),            // output
+      .is_jalr     (is_jalr),           // output
+      .branch      (branch),            // output
+      .mem_read    (mem_read),          // output
+      .mem_to_reg  (mem_to_reg),        // output
+      .mem_write   (mem_write),         // output
+      .alu_src     (alu_src),           // output
+      .write_enable(write_enable),      // output
+      .pc_to_reg   (pc_to_reg),         // output
+      .is_ecall    (is_ecall)           // output (ecall inst)
   );
 
   // ---------- Immediate Generator ----------
   immediate_generator imm_gen (
       .part_of_inst(instruction),  // input
-      .imm_gen_out (imm)   // output
+      .imm_gen_out(imm)  // output
   );
 
   // ---------- ALU Control Unit ----------
   alu_control_unit alu_ctrl_unit (
       .part_of_inst({instruction[30], instruction[14:12], instruction[6:0]}),  // input
-      .alu_op      (alu_op)   // output
+      .alu_op      (alu_op)                                                    // output
   );
 
   // ---------- ALU ----------
   alu alu_ (
-      .alu_op    (alu_op),  // input
+      .alu_op    (alu_op),      // input
       .alu_in_1  (rs1_output),  // input
       .alu_in_2  (rs2_or_imm),  // input
       .alu_result(alu_result),  // output
-      .alu_bcond (alu_bcond)   // output
+      .alu_bcond (alu_bcond)    // output
   );
 
   // ---------- Data Memory ----------
   data_memory dmem (
-      .reset    (reset),  // input
-      .clk      (clk),  // input
+      .reset    (reset),       // input
+      .clk      (clk),         // input
       .addr     (alu_result),  // input
       .din      (rs2_output),  // input
-      .mem_read (mem_read),  // input
-      .mem_write(mem_write),  // input
+      .mem_read (mem_read),    // input
+      .mem_write(mem_write),   // input
       .dout     (mem_output)   // output
   );
 endmodule

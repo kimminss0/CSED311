@@ -19,7 +19,7 @@ module register_file (
   // TODO
   // Asynchronously read register file
   // 현실적인 구현은 mux로 라인을 선택하겠지만 편의상 reg를 씀
-  always @(rs1, rs2, rf) begin
+  always @(*) begin
     rs1_dout = rf[rs1];
     rs2_dout = rf[rs2];
   end
@@ -29,9 +29,7 @@ module register_file (
     if (write_enable) begin
       rf[rd] <= rd_din;
     end
-
   end
-
 
   // Initialize register file (do not touch)
   always @(posedge clk) begin

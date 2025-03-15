@@ -18,8 +18,8 @@ module instruction_memory #(
   // TODO
   // Asynchronously read instruction from the memory
   // (use imem_addr to access memory)
-  always @(addr) begin
-    dout = mem[addr];
+  always @(*) begin
+    dout = mem[imem_addr];
   end
 
   // Initialize instruction memory (do not touch except path)
@@ -33,7 +33,7 @@ module instruction_memory #(
       // DO NOT TOUCH COMMENT ABOVE
 
       // Provide path of the file including instructions with binary format
-      $readmemh("/path/to/binary_format/file", mem);
+      $readmemh("./student_tb/basic_mem.txt", mem);
     end
   end
 

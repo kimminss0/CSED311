@@ -1,4 +1,4 @@
-`include "alu_def.v"
+`include "opcodes.v"
 
 module control_unit (
     input [6:0] part_of_inst,  // input, = opcode
