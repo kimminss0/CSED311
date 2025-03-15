@@ -4,7 +4,7 @@ module instruction_memory #(
     input reset,
     input clk,
     input [31:0] addr,  // address of the instruction memory
-    output reg [31:0] dout  // instruction at addr
+    output [31:0] dout  // instruction at addr
 );
   integer i;
   // Instruction memory
@@ -18,9 +18,7 @@ module instruction_memory #(
   // TODO
   // Asynchronously read instruction from the memory
   // (use imem_addr to access memory)
-  always @(*) begin
-    dout = mem[imem_addr];
-  end
+  assign dout = mem[imem_addr];
 
   // Initialize instruction memory (do not touch except path)
   always @(posedge clk) begin

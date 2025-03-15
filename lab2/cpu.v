@@ -46,37 +46,37 @@ module cpu (
   // five mux
   mux32 mux_pc_4_imm (
       .select(signal_pc_4_imm),
-      .w0(pc_add_4),
-      .w1(pc_add_imm),
-      .dout(pc_jal)
+      .w0    (pc_add_4),
+      .w1    (pc_add_imm),
+      .dout  (pc_jal)
   );
 
   mux32 mux_jal_alu (
       .select(is_jalr),
-      .w0(pc_jal),
-      .w1(alu_result),
-      .dout(next_pc)
+      .w0    (pc_jal),
+      .w1    (alu_result),
+      .dout  (next_pc)
   );
 
   mux32 mux_rs2_imm (
       .select(alu_src),
-      .w0(rs2_output),
-      .w1(imm),
-      .dout(rs2_or_imm)
+      .w0    (rs2_output),
+      .w1    (imm),
+      .dout  (rs2_or_imm)
   );
 
   mux32 mux_alu_mem (
       .select(mem_to_reg),
-      .w0(alu_result),
-      .w1(mem_output),
-      .dout(write_back_data)
+      .w0    (alu_result),
+      .w1    (mem_output),
+      .dout  (write_back_data)
   );
 
   mux32 mux_write_back (
       .select(pc_to_reg),
-      .w0(write_back_data),
-      .w1(pc_add_4),
-      .dout(write_data)
+      .w0    (write_back_data),
+      .w1    (pc_add_4),
+      .dout  (write_data)
   );
 
   /***** Register declarations *****/
