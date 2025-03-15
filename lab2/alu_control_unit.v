@@ -40,6 +40,8 @@ module alu_control_unit (
       `LOAD, `STORE, `JAL, `JALR
              :         alu_op = `ADD;
 
+      `ECALL :         alu_op = `BEQ;
+
       default:         alu_op = 0;  // never reaches
     endcase
   end

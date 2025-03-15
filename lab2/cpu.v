@@ -23,6 +23,7 @@ module cpu (
   wire [31:0] alu_result, mem_output;
   wire [31:0] write_back_data, write_data;
   wire [3:0] alu_op;
+  wire [4:0] rf_rs1;
 
   //signal wire
   wire is_jal, is_jalr, branch;
@@ -34,8 +35,9 @@ module cpu (
   //pc+4와 pc+imm의 slect signal, JAL과 BRANCH에서 발생
   assign signal_pc_4_imm = is_jal | (branch & alu_bcond);
 
-  // TODO: Implement
-  assign is_halted = is_ecall ? 0 : 0;
+  // ECALL related
+  assign is_halted = is_ecall && alu_bcond;
+  assign rf_rs1 = is_ecall ? 17 : instruction[19:15];
 
   // two adders
   assign pc_add_4 = current_pc + 4;
@@ -100,7 +102,7 @@ module cpu (
   register_file reg_file (
       .reset       (reset),               // input
       .clk         (clk),                 // input
-      .rs1         (instruction[19:15]),  // input
+      .rs1         (rf_rs1),              // input
       .rs2         (instruction[24:20]),  // input
       .rd          (instruction[11:7]),   // input
       .rd_din      (write_data),          // input

@@ -40,7 +40,7 @@ module control_unit (
 
     //write_enable
     case (opcode)
-      `BRANCH, `STORE: write_enable = 0;
+      `BRANCH, `STORE, `ECALL: write_enable = 0;
       default: write_enable = 1;
     endcase
 

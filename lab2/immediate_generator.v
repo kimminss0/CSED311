@@ -48,6 +48,8 @@ module immediate_generator (
         imm_gen_out[31:21] = (imm_gen_out[20] == 0) ? {11{1'b0}} : {11{1'b1}};
       end
 
+      `ECALL: imm_gen_out = 10;
+
       default: imm_gen_out = 0;
 
     endcase
