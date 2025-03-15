@@ -17,33 +17,20 @@ module control_unit (
   wire [6:0] opcode;
   assign opcode = part_of_inst;
 
-  initial begin
-    is_jal = 0;
-    is_jalr = 0;
-    branch = 0;
-    mem_read = 0;
-    mem_to_reg = 0;
-    mem_write = 0;
-    alu_src = 0;
-    write_enable = 0;
-    pc_to_reg = 0;
-    is_ecall = 0;
-  end
-
   always @(*) begin
     //is_jal
-    is_jal = (opcode == `JAL) ? 1 : 0;
+    is_jal = opcode == `JAL;
 
     //is_jalr
-    is_jalr = (opcode == `JALR) ? 1 : 0;
+    is_jalr = opcode == `JALR;
 
     //branch
-    branch = (opcode == `BRANCH) ? 1 : 0;
+    branch = opcode == `BRANCH;
 
     //mem_~
-    mem_read = (opcode == `LOAD) ? 1 : 0;
-    mem_to_reg = (opcode == `LOAD) ? 1 : 0;
-    mem_write = (opcode == `STORE) ? 1 : 0;
+    mem_read = opcode == `LOAD;
+    mem_to_reg = opcode == `LOAD;
+    mem_write = opcode == `STORE;
 
     //alu_src : zero -> src is register; one -> imm gen;
     case (opcode)
@@ -64,7 +51,7 @@ module control_unit (
     endcase
 
     //is_ecall
-    is_ecall = (opcode == `ECALL) ? 1 : 0;
+    is_ecall = opcode == `ECALL;
   end
 
 
