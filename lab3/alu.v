@@ -9,6 +9,7 @@ module alu (
 );
   always @(*) begin
     case (alu_op)
+      `ECA:    alu_result = alu_in_1 - 10;
       `BEQ, `BNE, `BLT, `BGE, `SUB
           :    alu_result = alu_in_1 - alu_in_2;
       `ADD:    alu_result = alu_in_1 + alu_in_2;
@@ -23,7 +24,8 @@ module alu (
 
   always @(*) begin
     case (alu_op)
-      `BEQ:    alu_bcond = alu_result == 0;
+      `BEQ, `ECA
+          :    alu_bcond = alu_result == 0;
       `BNE:    alu_bcond = alu_result != 0;
       `BLT:    alu_bcond = $signed(alu_result) < 0;
       `BGE:    alu_bcond = $signed(alu_result) >= 0;

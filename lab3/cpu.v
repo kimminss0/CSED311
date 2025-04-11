@@ -17,14 +17,21 @@ module cpu(input reset,       // positive reset signal
   wire [31:0] current_pc, next_pc, mem_address;
   wire [31:0] mem_dout, rs1_dout, rs2_dout, imm, alu_in_1, alu_in_2, rd_din, alu_result;
   wire [3:0] alu_op;
+  wire [31:0] pc_4;
+  assign pc_4 = current_pc + 4;
 
   wire alu_bcond;
+  reg bcond;
 
   /* signal wire */
   wire write_IR, write_MDR, write_AB, write_ALUOut;
-  wire i_or_d, mem_read, mem_write, mem_to_reg, write_reg, alu_scr_A, pc_source;
+  wire write_pc, i_or_d, mem_read, mem_write, mem_to_reg, write_reg, alu_scr_A, pc_source, write_bcond;
   wire [1:0] alu_scr_B;
 
+  wire [4:0] rf_rs1;
+
+  // ECALL related
+  wire is_ecall;
 
   /***** Register declarations *****/
   reg [31:0] IR; // instruction register
@@ -34,50 +41,75 @@ module cpu(input reset,       // positive reset signal
   reg [31:0] ALUOut; // ALU output register
   // Do not modify and use registers declared above.
 
+  assign is_halted = is_ecall && bcond;
+  assign rf_rs1 = is_ecall ? 17 : IR[19:15];
+
+
+  initial begin
+    IR = 0;
+    MDR = 0;
+    A = 0;
+    B = 0;
+    ALUOut = 0;
+    bcond = 0;
+  end
+
   // Update registers
   always @(posedge clk) begin
-    if(write_IR)
-      IR = mem_dout;
-    if(write_MDR)
-      MDR = mem_dout;
-    if(write_AB) begin
-      A = rs1_dout;
-      B = rs2_dout;
+    if(reset) begin
+      IR <= 0;
+      MDR <= 0;
+      A <= 0;
+      B <= 0;
+      ALUOut <= 0;
+      bcond <= 0;
     end
-    if(write_ALUOut)
-      ALUOut = alu_result;
+    else begin
+      if(write_IR)
+        IR <= mem_dout;
+      if(write_MDR)
+        MDR <= mem_dout;
+      if(write_AB) begin
+        A <= rs1_dout;
+        B <= rs2_dout;
+      end
+      if(write_ALUOut)
+        ALUOut <= alu_result;
+      if(write_bcond)
+        bcond <= alu_bcond;
+    end
   end
   
-  mem_address_mux mux32(
+  mux32 mem_address_mux (
      .select(i_or_d),
      .w0(current_pc),
      .w1(ALUOut),
      .dout(mem_address)
   );
   
-  register_write_data_mux mux32(
+  mux32 register_write_data_mux (
      .select(mem_to_reg),
      .w0(ALUOut),
      .w1(MDR),
      .dout(rd_din)
   );
 
-  AluScrA_mux mux32(
+  mux32 AluScrA_mux (
      .select(alu_scr_A),
      .w0(current_pc),
      .w1(A),
      .dout(alu_in_1)
   );
 
-  AluScrB_mux mux32_2(
+  mux32_2 AluScrB_mux (
      .select(alu_scr_B),
      .w0(B),
-     .w1(4),
-     .w2(imm),
+     .w1(imm),
+     .w2(4),
      .dout(alu_in_2)
   );
 
-  next_pc_mux mux32(
+  mux32 next_pc_mux (
      .select(pc_source),
      .w0(alu_result),
      .w1(ALUOut),
@@ -86,11 +118,12 @@ module cpu(input reset,       // positive reset signal
 
   // ---------- Update program counter ----------
   // PC must be updated on the rising edge (positive edge) of the clock.
-  PC pc(
+  pc pc(
     .reset(reset),       // input (Use reset to initialize PC. Initial value must be 0)
     .clk(clk),            // input
-    .write(write_pc)      // input
-    .next_pc(next_pc),     // input
+    .write(write_pc),      // input
+    //.next_pc(next_pc),     // input
+    .next_pc(pc_4),     // input
     .current_pc(current_pc)   // output
   );
 
@@ -98,7 +131,7 @@ module cpu(input reset,       // positive reset signal
   RegisterFile reg_file(
     .reset(reset),        // input
     .clk(clk),          // input
-    .rs1(IR[19:15]),          // input
+    .rs1(rf_rs1),          // input
     .rs2(IR[24:20]),          // input
     .rd(IR[11:7]),           // input
     .rd_din(rd_din),       // input
@@ -119,35 +152,43 @@ module cpu(input reset,       // positive reset signal
     .dout(mem_dout)          // output
   );
 
-  // ---------- Control Unit ----------
-  ControlUnit ctrl_unit(
-    .part_of_inst(),  // input
-    .is_jal(),        // output
-    .is_jalr(),       // output
-    .branch(),        // output
-    .mem_read(),      // output
-    .mem_to_reg(),    // output
-    .mem_write(),     // output
-    .alu_src(),       // output
-    .write_enable(),     // output
-    .pc_to_reg(),     // output
-    .is_ecall()       // output (ecall inst)
+  // ---------- Microcode Unit ----------
+  microcode_unit microcode_unit(
+    .reset(reset),          // input
+    .clk(clk),              // input
+    .opcode(IR[6:0]),              // input
+    .write_pc(write_pc),
+    .i_or_d(i_or_d),
+    .mem_read(mem_read),
+    .mem_write(mem_write),
+    .write_IR(write_IR),
+    .write_MDR(write_MDR),
+    .mem_to_reg(mem_to_reg),
+    .write_reg(write_reg),
+    .write_AB(write_AB),
+    .alu_scr_A(alu_scr_A),
+    .alu_scr_imm(alu_scr_B[0]),
+    .alu_scr_4(alu_scr_B[1]),
+    .write_ALUOut(write_ALUOut),
+    .pc_source(pc_source),
+    .write_bcond(write_bcond),
+    .is_ecall(is_ecall)       // output (ecall inst)
   );
 
   // ---------- Immediate Generator ----------
-  ImmediateGenerator imm_gen(
+  imm_gen imm_gen(
     .part_of_inst(IR),  // input
     .imm_gen_out(imm)    // output
   );
 
   // ---------- ALU Control Unit ----------
-  ALUControlUnit alu_ctrl_unit(
-    .part_of_inst({instruction[30], instruction[14:12], instruction[6:0]}),  // input
+  alu_control_unit alu_control_unit (
+    .part_of_inst({IR[30], IR[14:12], IR[6:0]}),  // input
     .alu_op(alu_op)         // output
   );
 
   // ---------- ALU ----------
-  ALU alu(
+  alu alu(
     .alu_op(alu_op),      // input
     .alu_in_1(alu_in_1),    // input  
     .alu_in_2(alu_in_2),    // input
