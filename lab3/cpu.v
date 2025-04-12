@@ -7,6 +7,7 @@
 // (e.g., port declarations, remove modules, define new modules, ...)
 // 3. You might need to describe combinational logics to drive them into the module (e.g., mux, and, or, ...)
 // 4. `include files if required
+`include "alu_def.v"
 
 module cpu(input reset,       // positive reset signal
            input clk,         // clock signal
@@ -17,8 +18,6 @@ module cpu(input reset,       // positive reset signal
   wire [31:0] current_pc, next_pc, mem_address;
   wire [31:0] mem_dout, rs1_dout, rs2_dout, imm, alu_in_1, alu_in_2, rd_din, alu_result;
   wire [3:0] alu_op;
-  wire [31:0] pc_4;
-  assign pc_4 = current_pc + 4;
 
   wire alu_bcond;
   reg bcond;
@@ -27,6 +26,7 @@ module cpu(input reset,       // positive reset signal
   wire write_IR, write_MDR, write_AB, write_ALUOut;
   wire write_pc, i_or_d, mem_read, mem_write, mem_to_reg, write_reg, alu_scr_A, pc_source, write_bcond;
   wire [1:0] alu_scr_B;
+  wire control_add;
 
   wire [4:0] rf_rs1;
 
@@ -122,8 +122,7 @@ module cpu(input reset,       // positive reset signal
     .reset(reset),       // input (Use reset to initialize PC. Initial value must be 0)
     .clk(clk),            // input
     .write(write_pc),      // input
-    //.next_pc(next_pc),     // input
-    .next_pc(pc_4),     // input
+    .next_pc(next_pc),     // input
     .current_pc(current_pc)   // output
   );
 
@@ -157,6 +156,7 @@ module cpu(input reset,       // positive reset signal
     .reset(reset),          // input
     .clk(clk),              // input
     .opcode(IR[6:0]),              // input
+    .bcond(bcond),              // input
     .write_pc(write_pc),
     .i_or_d(i_or_d),
     .mem_read(mem_read),
@@ -172,6 +172,7 @@ module cpu(input reset,       // positive reset signal
     .write_ALUOut(write_ALUOut),
     .pc_source(pc_source),
     .write_bcond(write_bcond),
+    .control_add(control_add),
     .is_ecall(is_ecall)       // output (ecall inst)
   );
 
@@ -189,7 +190,7 @@ module cpu(input reset,       // positive reset signal
 
   // ---------- ALU ----------
   alu alu(
-    .alu_op(alu_op),      // input
+    .alu_op( control_add ? `ADD : alu_op),      // input
     .alu_in_1(alu_in_1),    // input  
     .alu_in_2(alu_in_2),    // input
     .alu_result(alu_result),  // output
