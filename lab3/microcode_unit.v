@@ -5,6 +5,7 @@ module microcode_unit (
     input reset,
     input clk,
     input [6:0] opcode,
+    input bcond,
     output write_pc,
     output i_or_d,
     output mem_read,
@@ -20,6 +21,7 @@ module microcode_unit (
     output write_ALUOut,
     output pc_source,
     output write_bcond,
+    output control_add,
     output is_ecall);
 
   wire mem_if_read, mem_excute, fix_alu_src_pc4, fix_alu_src_AB;
@@ -29,49 +31,49 @@ module microcode_unit (
   reg [11:0] microcode [0:7];
 
   assign mem_to_reg = opcode == `LOAD;
-  assign pc_source = (opcode == `JAL) || (opcode == `JALR) || (opcode == `BRANCH);
+  assign pc_source = bcond && (opcode == `BRANCH);
     
-  assign i_or_d = microcode[current_upc][11];
-  assign write_pc = microcode[current_upc][10];
-  assign write_IR = microcode[current_upc][9];
-  assign write_AB = microcode[current_upc][8];
-  assign write_ALUOut = microcode[current_upc][7];
-  assign write_reg = microcode[current_upc][6];
-  assign write_bcond = microcode[current_upc][5];
-  assign write_MDR = microcode[current_upc][4];
-  assign mem_if_read = microcode[current_upc][3];
-  assign mem_excute = microcode[current_upc][2];
-  assign fix_alu_src_pc4 = microcode[current_upc][1];
-  assign fix_alu_src_AB = microcode[current_upc][0];
-
+  assign i_or_d = microcode[current_upc][9];
+  assign write_pc = microcode[current_upc][8];
+  assign write_IR = microcode[current_upc][7];
+  assign write_AB = microcode[current_upc][6];
+  assign write_ALUOut = microcode[current_upc][5];
+  assign write_reg = microcode[current_upc][4];
+  assign write_bcond = microcode[current_upc][3];
+  assign write_MDR = microcode[current_upc][2];
+  assign mem_if_read = microcode[current_upc][1];
+  assign mem_excute = microcode[current_upc][0];
   assign is_ecall = opcode == `ECALL;
 
   assign mem_read = mem_if_read ? 1 : ( mem_excute && opcode == `LOAD);
   assign mem_write = ( mem_excute && opcode == `STORE);
-  assign alu_scr_A = fix_alu_src_pc4 ? 0 : ( fix_alu_src_AB ? 1 : !(opcode == `BRANCH || opcode == `JAL) );
-  assign alu_scr_imm = fix_alu_src_AB ? 0 : opcode != `ARITHMETIC;
-  assign alu_scr_4 = fix_alu_src_pc4;
+  assign alu_scr_A = ( write_ALUOut && !(opcode == `BRANCH || opcode == `JAL  || opcode == `JALR) ) || (write_pc && opcode == `JALR) || write_bcond;
+  assign alu_scr_imm = !( (write_ALUOut && opcode == `ARITHMETIC) || write_bcond );
+  assign alu_scr_4 = write_pc ^ (opcode == `JAL || opcode == `JALR);
+
+  assign control_add = (write_ALUOut && (opcode == `BRANCH)) || write_pc;
 
   initial begin
     current_upc = 1;
 
-    /* 11   | 10        | 9         | 8         | 7             | 6           | 5             | 4           | 3             | 2           | 1                | 0              |*/
-    /* i|d  | write_pc  | write_IR  | write_AB  | writeALUOut   | write_reg   | write_bcond   | write_MDR   | mem_if_read   | mem_excute  | fix_alu_src_pc4   | fix_alu_src_AB  |*/
-    microcode[0] = 12'b010000000010; // IF1
-    microcode[1] = 12'b001000001000; // IF2
-    microcode[2] = 12'b000100000000; // ID
-    microcode[3] = 12'b000010000000; // EX1
-    microcode[4] = 12'b000000100001; // EX2
-    microcode[5] = 12'b100000010100; // MEM1
-    microcode[6] = 12'b100000000100; // MEM2
-    microcode[7] = 12'b000001000000; // WB
+    /* 9    | 8         | 7         | 6         | 5             | 4           | 3             | 2           | 1             | 0           |*/
+    /* i|d  | write_pc  | write_IR  | write_AB  | writeALUOut   | write_reg   | write_bcond   | write_MDR   | mem_if_read   | mem_excute  */
+    microcode[0] = 12'b0100000000; // IF1
+    microcode[1] = 12'b0010000010; // IF2
+    microcode[2] = 12'b0001000000; // ID
+    microcode[3] = 12'b0000100000; // EX1
+    microcode[4] = 12'b0000001000; // EX2
+    microcode[5] = 12'b1000000101; // MEM1
+    microcode[6] = 12'b0000000000; // MEM2
+    microcode[7] = 12'b0000010000; // WB
   end
 
   always @(*) begin
     case (current_upc)
       `IF2: begin
         if(opcode == `JAL)
-          next_upc = `EX1;
+          //next_upc = `EX1; 처리 필요
+          next_upc = current_upc + 1;
         else
           next_upc = current_upc + 1;
       end
