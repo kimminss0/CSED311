@@ -24,7 +24,7 @@ module microcode_unit (
     output control_add,
     output is_ecall);
 
-  wire mem_if_read, mem_excute, fix_alu_src_pc4, fix_alu_src_AB;
+  wire mem_if_read, mem_excute;
   reg [2:0] current_upc;
   reg [2:0] next_upc;
 
