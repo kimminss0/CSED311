@@ -28,7 +28,7 @@ module microcode_unit (
   reg [2:0] current_upc;
   reg [2:0] next_upc;
 
-  reg [11:0] microcode [0:7];
+  reg [9:0] microcode [0:7];
 
   assign mem_to_reg = opcode == `LOAD;
   assign pc_source = bcond && (opcode == `BRANCH);
@@ -58,14 +58,14 @@ module microcode_unit (
 
     /* 9    | 8         | 7         | 6         | 5             | 4           | 3             | 2           | 1             | 0           |*/
     /* i|d  | write_pc  | write_IR  | write_AB  | writeALUOut   | write_reg   | write_bcond   | write_MDR   | mem_if_read   | mem_excute  */
-    microcode[0] = 12'b0100000000; // IF1
-    microcode[1] = 12'b0010000010; // IF2
-    microcode[2] = 12'b0001000000; // ID
-    microcode[3] = 12'b0000100000; // EX1
-    microcode[4] = 12'b0000001000; // EX2
-    microcode[5] = 12'b1000000101; // MEM1
-    microcode[6] = 12'b0000000000; // MEM2
-    microcode[7] = 12'b0000010000; // WB
+    microcode[0] = 10'b0100000000; // IF1
+    microcode[1] = 10'b0010000010; // IF2
+    microcode[2] = 10'b0001000000; // ID
+    microcode[3] = 10'b0000100000; // EX1
+    microcode[4] = 10'b0000001000; // EX2
+    microcode[5] = 10'b1000000101; // MEM1
+    microcode[6] = 10'b0000000000; // MEM2
+    microcode[7] = 10'b0000010000; // WB
   end
 
   always @(*) begin
