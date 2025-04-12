@@ -1,3 +1,4 @@
 .stamp.*
 obj_dir/
 waveform.vcd
+student_tb/test.txt

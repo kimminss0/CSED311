@@ -1,7 +1,6 @@
 .stamp.*
 obj_dir/
 waveform.vcd
-../lab2/student_tb/test.txt
 student_tb/dummy.txt
 student_tb/test.txt
 test_recur
