@@ -33,6 +33,7 @@ module cpu (
   wire bcond;
 
   wire [1:0] forward_A, forward_B;
+  wire        forward_ecall;
 
   /***** Register declarations *****/
   // You need to modify the width of registers
@@ -40,51 +41,51 @@ module cpu (
   // 1. You might need other pipeline registers that are not described below
   // 2. You might not need registers described below
   /***** IF/ID pipeline registers *****/
-  reg [31:0] IF_ID_inst;  // will be used in ID stage
-  reg [31:0] IF_ID_PC;
+  reg  [31:0] IF_ID_inst;  // will be used in ID stage
+  reg  [31:0] IF_ID_PC;
   /***** ID/EX pipeline registers *****/
   // From the control unit
-  reg        ID_EX_alu_op;  // will be used in EX stage
-  reg        ID_EX_alu_src;  // will be used in EX stage
-  reg        ID_EX_mem_write;  // will be used in MEM stage
-  reg        ID_EX_mem_read;  // will be used in MEM stage
-  reg        ID_EX_mem_to_reg;  // will be used in WB stage
-  reg        ID_EX_reg_write;  // will be used in WB stage
-  reg        ID_EX_is_ecall;  // will be used in WB stage
+  reg         ID_EX_alu_op;  // will be used in EX stage
+  reg         ID_EX_alu_src;  // will be used in EX stage
+  reg         ID_EX_mem_write;  // will be used in MEM stage
+  reg         ID_EX_mem_read;  // will be used in MEM stage
+  reg         ID_EX_mem_to_reg;  // will be used in WB stage
+  reg         ID_EX_reg_write;  // will be used in WB stage
   // From others
-  reg [31:0] ID_EX_inst;  // will be used in EX stage
-  reg [31:0] ID_EX_rs1_data;
-  reg [31:0] ID_EX_rs2_data;
-  reg [31:0] ID_EX_imm;
-  reg [10:0] ID_EX_ALU_ctrl_unit_input;
-  reg [ 4:0] ID_EX_rd;
-  reg [31:0] ID_EX_PC;
+  reg  [31:0] ID_EX_inst;  // will be used in EX stage
+  reg  [31:0] ID_EX_rs1_data;
+  reg  [31:0] ID_EX_rs2_data;
+  reg  [31:0] ID_EX_imm;
+  reg  [10:0] ID_EX_ALU_ctrl_unit_input;
+  reg  [ 4:0] ID_EX_rd;
+  reg  [31:0] ID_EX_PC;
 
   /***** EX/MEM pipeline registers *****/
   // From the control unit
-  reg        EX_MEM_mem_write;  // will be used in MEM stage
-  reg        EX_MEM_mem_read;  // will be used in MEM stage
-  reg        EX_MEM_is_branch;  // will be used in MEM stage
-  reg        EX_MEM_mem_to_reg;  // will be used in WB stage
-  reg        EX_MEM_reg_write;  // will be used in WB stage
+  reg         EX_MEM_mem_write;  // will be used in MEM stage
+  reg         EX_MEM_mem_read;  // will be used in MEM stage
+  reg         EX_MEM_is_branch;  // will be used in MEM stage
+  reg         EX_MEM_mem_to_reg;  // will be used in WB stage
+  reg         EX_MEM_reg_write;  // will be used in WB stage
   // From others
-  reg [31:0] EX_MEM_alu_out;
-  reg [31:0] EX_MEM_dmem_data;
-  reg [ 4:0] EX_MEM_rd;
-  reg [31:0] EX_MEM_pc_imm;
-  reg        EX_MEM_is_halted;
+  reg  [31:0] EX_MEM_alu_out;
+  reg  [31:0] EX_MEM_dmem_data;
+  reg  [ 4:0] EX_MEM_rd;
+  reg  [31:0] EX_MEM_pc_imm;
+  reg         EX_MEM_is_halted;
+  reg         ID_EX_is_halted;
 
   /***** MEM/WB pipeline registers *****/
   // From the control unit
-  reg        MEM_WB_mem_to_reg;  // will be used in WB stage
-  reg        MEM_WB_reg_write;  // will be used in WB stage
+  reg         MEM_WB_mem_to_reg;  // will be used in WB stage
+  reg         MEM_WB_reg_write;  // will be used in WB stage
   // From others
-  reg        MEM_WB_mem_to_reg_src_1;
-  reg        MEM_WB_mem_to_reg_src_2;
-  reg [31:0] MEM_WB_alu_out;
-  reg [ 4:0] MEM_WB_rd;  // write address(rd) on register
-  reg [31:0] MEM_WB_mem_dout;
-  reg        MEM_WB_is_halted;
+  reg         MEM_WB_mem_to_reg_src_1;
+  reg         MEM_WB_mem_to_reg_src_2;
+  reg  [31:0] MEM_WB_alu_out;
+  reg  [ 4:0] MEM_WB_rd;  // write address(rd) on register
+  reg  [31:0] MEM_WB_mem_dout;
+  reg         MEM_WB_is_halted;
 
 
   // ---------- Update program counter ----------
@@ -181,7 +182,7 @@ module cpu (
       ID_EX_rd <= 0;
       ID_EX_reg_write <= 0;
       ID_EX_mem_to_reg <= 0;
-      ID_EX_is_ecall <= 0;
+      ID_EX_is_halted <= 0;
 
     end else begin
       /* used in ex stage */
@@ -192,7 +193,6 @@ module cpu (
       ID_EX_imm <= imm;
       ID_EX_PC <= IF_ID_PC;
       ID_EX_ALU_ctrl_unit_input <= {IF_ID_inst[30], IF_ID_inst[14:12], IF_ID_inst[6:0]};
-      ID_EX_is_ecall <= is_ecall;
 
       /* used in mem stage */
       ID_EX_mem_write <= mem_write;
@@ -202,8 +202,7 @@ module cpu (
       ID_EX_rd <= IF_ID_inst[11:7];
       ID_EX_reg_write <= write_enable;
       ID_EX_mem_to_reg <= mem_to_reg;
-
-
+      ID_EX_is_halted <= is_ecall && ((forward_ecall ? EX_MEM_alu_out : rs1_dout) == 10);
     end
   end
 
@@ -251,22 +250,25 @@ module cpu (
 
   // ---------- Hazard Detection ----------
   HazardDetection hazard_detection (
-      .IF_ID_inst    (IF_ID_inst),      // input
-      .ID_EX_rd      (ID_EX_rd),        // input
-      .ID_EX_mem_read(ID_EX_mem_read),  // input
-      .stall         (is_stall)         // output
+      .IF_ID_inst      (IF_ID_inst),        // input
+      .ID_EX_rd        (ID_EX_rd),          // input
+      .EX_MEM_rd       (EX_MEM_rd),         // input
+      .ID_EX_mem_read  (ID_EX_mem_read),    // input
+      .ID_EX_reg_write (ID_EX_reg_write),   // input
+      .EX_MEM_reg_write(EX_MEM_reg_write),  // input
+      .stall           (is_stall)           // output
   );
 
   // ---------- Forwarding Unit ----------
   ForwardingUnit forwarding_unit (
       .ID_EX_inst      (ID_EX_inst),        // input
-      .ID_EX_is_ecall  (ID_EX_is_ecall),    // input
       .EX_MEM_rd       (EX_MEM_rd),         // input
       .MEM_WB_rd       (MEM_WB_rd),         // input
       .EX_MEM_reg_write(EX_MEM_reg_write),  // input
       .MEM_WB_reg_write(MEM_WB_reg_write),  // input
       .forward_A       (forward_A),         // output
-      .forward_B       (forward_B)          // output
+      .forward_B       (forward_B),         // output
+      .forward_ecall   (forward_ecall)      // output
   );
 
   // Update EX/MEM pipeline registers here
@@ -295,7 +297,7 @@ module cpu (
       EX_MEM_rd <= ID_EX_rd;
       EX_MEM_reg_write <= ID_EX_reg_write;
       EX_MEM_mem_to_reg <= ID_EX_mem_to_reg;
-      EX_MEM_is_halted <= ID_EX_is_ecall && (alu_result == 0);
+      EX_MEM_is_halted <= ID_EX_is_halted;
     end
   end
 
