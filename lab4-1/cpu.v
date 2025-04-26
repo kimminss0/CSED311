@@ -9,9 +9,9 @@
 // 4. `include files if required
 
 module cpu (
-    input         reset,           // positive reset signal
-    input         clk,             // clock signal
-    output        is_halted,       // Whehther to finish simulation
+    input         reset,         // positive reset signal
+    input         clk,           // clock signal
+    output        is_halted,     // Whehther to finish simulation
     output [31:0] print_reg[32]  // Whehther to finish simulation
 );
   /***** Wire declarations *****/
@@ -151,6 +151,7 @@ module cpu (
   // ---------- Control Unit ----------
   ControlUnit ctrl_unit (
       .part_of_inst(IF_ID_inst[6:0]),  // input
+      .is_stall    (is_stall),         // input
       .mem_read    (mem_read),         // output
       .mem_to_reg  (mem_to_reg),       // output
       .mem_write   (mem_write),        // output
@@ -231,6 +232,14 @@ module cpu (
       .alu_in_2  (rs2_or_imm),      // input
       .alu_result(alu_result),      // output
       .alu_zero  (bcond)            // output
+  );
+
+  // ---------- Hazard Detection ----------
+  HazardDetection hazard_detection (
+      .IF_ID_inst    (IF_ID_inst),      // input
+      .ID_EX_rd      (ID_EX_rd),        // input
+      .ID_EX_mem_read(ID_EX_mem_read),  // input
+      .stall         (is_stall)         // output
   );
 
   // Update EX/MEM pipeline registers here

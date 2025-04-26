@@ -2,6 +2,7 @@
 
 module ControlUnit (
     input [6:0] part_of_inst, // input, = opcode
+    input is_stall, // input
     //output reg is_jal,        // output
     //output reg is_jalr,       // output
     //output reg branch,        // output
@@ -43,6 +44,10 @@ module ControlUnit (
       `JAL, `JALR: pc_to_reg = 1;
       default:     pc_to_reg = 0;
     endcase
+
+    // stall
+    mem_write    &= !is_stall;
+    write_enable &= !is_stall;
   end
 
 
