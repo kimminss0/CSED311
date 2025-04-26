@@ -10,10 +10,8 @@ module PC (
   end
 
   always @(posedge clk) begin
-    if(reset)
-      current_pc <= 0;
-    else if (!is_stall)
-      current_pc <= next_pc;
+    if (reset) current_pc <= 0;
+    else if (!is_stall) current_pc <= next_pc;
     //On else, not change
   end
 endmodule

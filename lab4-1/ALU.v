@@ -6,10 +6,10 @@ module ALU (
     input      [31:0] alu_in_2,
     output reg [31:0] alu_result,
     output reg        alu_bcond,
-    output reg        alu_zero //일단 임시로 zero로 둠
+    output reg        alu_zero     //일단 임시로 zero로 둠
 );
-  
-  initial begin // 이것도 임시
+
+  initial begin  // 이것도 임시
     alu_zero = 0;
   end
 
