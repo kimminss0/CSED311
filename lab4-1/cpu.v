@@ -22,6 +22,7 @@ module cpu (
   wire [31:0] imm, rs1_dout, rs2_dout, rs2_or_imm, rd_din;
   wire [31:0] alu_result, mem_dout;
   wire [31:0] write_back_data, write_data;
+  wire [31:0] alu_rs1, alu_rs2;
   wire [3:0] alu_op;
   wire [4:0] rf_rs1;
 
@@ -29,7 +30,9 @@ module cpu (
 
   wire mem_read, mem_to_reg, mem_write, alu_src, write_enable, pc_to_reg;
   wire is_ecall, is_halted_ID;
-  wire        bcond;
+  wire bcond;
+
+  wire [1:0] forward_A, forward_B;
 
   /***** Register declarations *****/
   // You need to modify the width of registers
@@ -37,53 +40,54 @@ module cpu (
   // 1. You might need other pipeline registers that are not described below
   // 2. You might not need registers described below
   /***** IF/ID pipeline registers *****/
-  reg  [31:0] IF_ID_inst;  // will be used in ID stage
-  reg  [31:0] IF_ID_PC;
+  reg [31:0] IF_ID_inst;  // will be used in ID stage
+  reg [31:0] IF_ID_PC;
   /***** ID/EX pipeline registers *****/
   // From the control unit
-  reg         ID_EX_alu_op;  // will be used in EX stage
-  reg         ID_EX_alu_src;  // will be used in EX stage
-  reg         ID_EX_mem_write;  // will be used in MEM stage
-  reg         ID_EX_mem_read;  // will be used in MEM stage
-  reg         ID_EX_mem_to_reg;  // will be used in WB stage
-  reg         ID_EX_reg_write;  // will be used in WB stage
+  reg        ID_EX_alu_op;  // will be used in EX stage
+  reg        ID_EX_alu_src;  // will be used in EX stage
+  reg        ID_EX_mem_write;  // will be used in MEM stage
+  reg        ID_EX_mem_read;  // will be used in MEM stage
+  reg        ID_EX_mem_to_reg;  // will be used in WB stage
+  reg        ID_EX_reg_write;  // will be used in WB stage
   // From others
-  reg  [31:0] ID_EX_rs1_data;
-  reg  [31:0] ID_EX_rs2_data;
-  reg  [31:0] ID_EX_imm;
-  reg  [10:0] ID_EX_ALU_ctrl_unit_input;
-  reg  [ 4:0] ID_EX_rd;
-  reg  [31:0] ID_EX_PC;
+  reg [31:0] ID_EX_inst;  // will be used in EX stage
+  reg [31:0] ID_EX_rs1_data;
+  reg [31:0] ID_EX_rs2_data;
+  reg [31:0] ID_EX_imm;
+  reg [10:0] ID_EX_ALU_ctrl_unit_input;
+  reg [ 4:0] ID_EX_rd;
+  reg [31:0] ID_EX_PC;
 
-  reg         ID_EX_is_halted;
+  reg        ID_EX_is_halted;
 
   /***** EX/MEM pipeline registers *****/
   // From the control unit
-  reg         EX_MEM_mem_write;  // will be used in MEM stage
-  reg         EX_MEM_mem_read;  // will be used in MEM stage
-  reg         EX_MEM_is_branch;  // will be used in MEM stage
-  reg         EX_MEM_mem_to_reg;  // will be used in WB stage
-  reg         EX_MEM_reg_write;  // will be used in WB stage
+  reg        EX_MEM_mem_write;  // will be used in MEM stage
+  reg        EX_MEM_mem_read;  // will be used in MEM stage
+  reg        EX_MEM_is_branch;  // will be used in MEM stage
+  reg        EX_MEM_mem_to_reg;  // will be used in WB stage
+  reg        EX_MEM_reg_write;  // will be used in WB stage
   // From others
-  reg  [31:0] EX_MEM_alu_out;
-  reg  [31:0] EX_MEM_dmem_data;
-  reg  [ 4:0] EX_MEM_rd;
-  reg  [31:0] EX_MEM_pc_imm;
+  reg [31:0] EX_MEM_alu_out;
+  reg [31:0] EX_MEM_dmem_data;
+  reg [ 4:0] EX_MEM_rd;
+  reg [31:0] EX_MEM_pc_imm;
 
-  reg         EX_MEM_is_halted;
+  reg        EX_MEM_is_halted;
 
   /***** MEM/WB pipeline registers *****/
   // From the control unit
-  reg         MEM_WB_mem_to_reg;  // will be used in WB stage
-  reg         MEM_WB_reg_write;  // will be used in WB stage
+  reg        MEM_WB_mem_to_reg;  // will be used in WB stage
+  reg        MEM_WB_reg_write;  // will be used in WB stage
   // From others
-  reg         MEM_WB_mem_to_reg_src_1;
-  reg         MEM_WB_mem_to_reg_src_2;
-  reg  [31:0] MEM_WB_alu_out;
-  reg  [ 4:0] MEM_WB_rd;  // write address(rd) on register
-  reg  [31:0] MEM_WB_mem_dout;
+  reg        MEM_WB_mem_to_reg_src_1;
+  reg        MEM_WB_mem_to_reg_src_2;
+  reg [31:0] MEM_WB_alu_out;
+  reg [ 4:0] MEM_WB_rd;  // write address(rd) on register
+  reg [31:0] MEM_WB_mem_dout;
 
-  reg         MEM_WB_is_halted;
+  reg        MEM_WB_is_halted;
 
 
   // ---------- Update program counter ----------
@@ -158,7 +162,6 @@ module cpu (
       .alu_src     (alu_src),          // output
       .write_enable(write_enable),     // output
       .pc_to_reg   (pc_to_reg),        // output
-      //.alu_op(),        // output -> 여기 처리는 ID_EX_inst을 직접파싱해서 crtl_unit_input으로 만듬
       .is_ecall    (is_ecall)          // output (ecall inst)
   );
 
@@ -172,6 +175,7 @@ module cpu (
   always @(posedge clk) begin
     if (reset) begin
       /* used in ex stage */
+      ID_EX_inst <= 0;
       ID_EX_alu_src <= 0;
       ID_EX_rs1_data <= 0;
       ID_EX_rs2_data <= 0;
@@ -187,6 +191,7 @@ module cpu (
 
     end else begin
       /* used in ex stage */
+      ID_EX_inst <= IF_ID_inst;
       ID_EX_alu_src <= alu_src;
       ID_EX_rs1_data <= rs1_dout;
       ID_EX_rs2_data <= rs2_dout;
@@ -225,13 +230,29 @@ module cpu (
       .dout(rs2_or_imm)
   );
 
+  mux32_2 alu_rs1_forward_mux (
+      .select(forward_A),
+      .w0(ID_EX_rs1_data),
+      .w1(rd_din),
+      .w2(EX_MEM_alu_out),
+      .dout(alu_rs1)
+  );
+
+  mux32_2 alu_rs2_forward_mux (
+      .select(forward_B),
+      .w0(rs2_or_imm),
+      .w1(rd_din),
+      .w2(EX_MEM_alu_out),
+      .dout(alu_rs2)
+  );
+
   // ---------- ALU ----------
   ALU alu (
-      .alu_op    (alu_op),          // input
-      .alu_in_1  (ID_EX_rs1_data),  // input
-      .alu_in_2  (rs2_or_imm),      // input
-      .alu_result(alu_result),      // output
-      .alu_zero  (bcond)            // output
+      .alu_op    (alu_op),      // input
+      .alu_in_1  (alu_rs1),     // input
+      .alu_in_2  (alu_rs2),     // input
+      .alu_result(alu_result),  // output
+      .alu_bcond (bcond)        // output
   );
 
   // ---------- Hazard Detection ----------
@@ -240,6 +261,17 @@ module cpu (
       .ID_EX_rd      (ID_EX_rd),        // input
       .ID_EX_mem_read(ID_EX_mem_read),  // input
       .stall         (is_stall)         // output
+  );
+
+  // ---------- Forwarding Unit ----------
+  ForwardingUnit forwarding_unit (
+      .ID_EX_inst      (ID_EX_inst),
+      .EX_MEM_rd       (EX_MEM_rd),
+      .MEM_WB_rd       (MEM_WB_rd),
+      .EX_MEM_reg_write(EX_MEM_reg_write),
+      .MEM_WB_reg_write(MEM_WB_reg_write),
+      .forward_A       (forward_A),
+      .forward_B       (forward_B)
   );
 
   // Update EX/MEM pipeline registers here
@@ -267,8 +299,7 @@ module cpu (
       // EX_MEM_alu_out is also used
       EX_MEM_rd <= ID_EX_rd;
       EX_MEM_reg_write <= ID_EX_reg_write;
-      EX_MEM_mem_to_reg = ID_EX_mem_to_reg;
-
+      EX_MEM_mem_to_reg <= ID_EX_mem_to_reg;
       EX_MEM_is_halted <= ID_EX_is_halted;
 
     end

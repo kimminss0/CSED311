@@ -5,13 +5,9 @@ module ALU (
     input      [31:0] alu_in_1,
     input      [31:0] alu_in_2,
     output reg [31:0] alu_result,
-    output reg        alu_bcond,
-    output reg        alu_zero     //일단 임시로 zero로 둠
+    output reg        alu_bcond
 );
-
-  initial begin  // 이것도 임시
-    alu_zero = 0;
-  end
+  wire alu_zero = 0;
 
   always @(*) begin
     case (alu_op)
@@ -35,5 +31,6 @@ module ALU (
       `BGE:    alu_bcond = $signed(alu_result) >= 0;
       default: alu_bcond = 0;
     endcase
+    alu_bcond = alu_zero; // temporary
   end
 endmodule
