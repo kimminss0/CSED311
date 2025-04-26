@@ -19,10 +19,10 @@ module cpu (
 
   wire [31:0] current_pc, next_pc;
   wire [31:0] instruction;
-  wire [31:0] imm, rs1_dout, rs2_dout, rs2_or_imm, rd_din;
+  wire [31:0] imm, rs1_dout, rs2_dout, alu_rs2, rd_din;
   wire [31:0] alu_result, mem_dout;
   wire [31:0] write_back_data, write_data;
-  wire [31:0] alu_rs1, alu_rs2;
+  wire [31:0] alu_rs1, alu_rs2_or_imm;
   wire [3:0] alu_op;
   wire [4:0] rf_rs1;
 
@@ -219,9 +219,9 @@ module cpu (
   // ---------- ALU rs2 mux
   mux32 alu_rs2_mux (
       .select(ID_EX_alu_src),
-      .w0(ID_EX_rs2_data),
+      .w0(alu_rs2),
       .w1(ID_EX_imm),
-      .dout(rs2_or_imm)
+      .dout(alu_rs2_or_imm)
   );
 
   mux32_2 alu_rs1_forward_mux (
@@ -234,7 +234,7 @@ module cpu (
 
   mux32_2 alu_rs2_forward_mux (
       .select(forward_B),
-      .w0(rs2_or_imm),
+      .w0(ID_EX_rs2_data),
       .w1(rd_din),
       .w2(EX_MEM_alu_out),
       .dout(alu_rs2)
@@ -242,11 +242,11 @@ module cpu (
 
   // ---------- ALU ----------
   ALU alu (
-      .alu_op    (alu_op),      // input
-      .alu_in_1  (alu_rs1),     // input
-      .alu_in_2  (alu_rs2),     // input
-      .alu_result(alu_result),  // output
-      .alu_bcond (bcond)        // output
+      .alu_op    (alu_op),          // input
+      .alu_in_1  (alu_rs1),         // input
+      .alu_in_2  (alu_rs2_or_imm),  // input
+      .alu_result(alu_result),      // output
+      .alu_bcond (bcond)            // output
   );
 
   // ---------- Hazard Detection ----------
@@ -259,14 +259,14 @@ module cpu (
 
   // ---------- Forwarding Unit ----------
   ForwardingUnit forwarding_unit (
-      .ID_EX_inst      (ID_EX_inst),
-      .ID_EX_is_ecall  (ID_EX_is_ecall),
-      .EX_MEM_rd       (EX_MEM_rd),
-      .MEM_WB_rd       (MEM_WB_rd),
-      .EX_MEM_reg_write(EX_MEM_reg_write),
-      .MEM_WB_reg_write(MEM_WB_reg_write),
-      .forward_A       (forward_A),
-      .forward_B       (forward_B)
+      .ID_EX_inst      (ID_EX_inst),        // input
+      .ID_EX_is_ecall  (ID_EX_is_ecall),    // input
+      .EX_MEM_rd       (EX_MEM_rd),         // input
+      .MEM_WB_rd       (MEM_WB_rd),         // input
+      .EX_MEM_reg_write(EX_MEM_reg_write),  // input
+      .MEM_WB_reg_write(MEM_WB_reg_write),  // input
+      .forward_A       (forward_A),         // output
+      .forward_B       (forward_B)          // output
   );
 
   // Update EX/MEM pipeline registers here
@@ -283,10 +283,10 @@ module cpu (
     end else begin
       /* used in mem stage */
       EX_MEM_alu_out <= alu_result;
-      EX_MEM_dmem_data <= rs2_dout;
+      EX_MEM_dmem_data <= alu_rs2;
 
-      EX_MEM_mem_read <= ID_EX_mem_write;
-      EX_MEM_mem_write <= ID_EX_mem_read;
+      EX_MEM_mem_read <= ID_EX_mem_read;
+      EX_MEM_mem_write <= ID_EX_mem_write;
 
       EX_MEM_pc_imm <= pc_imm;  // jal, branch
 
