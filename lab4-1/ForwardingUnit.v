@@ -1,5 +1,6 @@
 module ForwardingUnit (
     input      [31:0] ID_EX_inst,
+    input             ID_EX_is_ecall,
     input      [ 4:0] EX_MEM_rd,
     input      [ 4:0] MEM_WB_rd,
     input             EX_MEM_reg_write,
@@ -7,7 +8,7 @@ module ForwardingUnit (
     output reg [ 1:0] forward_A,
     output reg [ 1:0] forward_B
 );
-  wire [4:0] ID_EX_rs1 = ID_EX_inst[19:15];
+  wire [4:0] ID_EX_rs1 = ID_EX_is_ecall ? 17 : ID_EX_inst[19:15];
   wire [4:0] ID_EX_rs2 = ID_EX_inst[24:20];
 
   always @(*) begin

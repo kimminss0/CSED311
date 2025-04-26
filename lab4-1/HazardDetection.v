@@ -24,7 +24,7 @@ module HazardDetection (
       `STORE:                        {use_rs1, use_rs2} = 2'b11;
       `BRANCH:                       {use_rs1, use_rs2} = 2'b11;
       `JAL:                          {use_rs1, use_rs2} = 2'b00;
-      `ECALL:                        {use_rs1, use_rs2} = 2'b00;
+      `ECALL:                        {use_rs1, use_rs2} = 2'b10;
       default:                       {use_rs1, use_rs2} = 2'b00;
     endcase
     use_rs1 &= IF_ID_rs1 != 0;

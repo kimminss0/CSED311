@@ -29,7 +29,7 @@ module cpu (
   wire [31:0] pc_imm, pc_4;
 
   wire mem_read, mem_to_reg, mem_write, alu_src, write_enable, pc_to_reg;
-  wire is_ecall, is_halted_ID;
+  wire is_ecall;
   wire bcond;
 
   wire [1:0] forward_A, forward_B;
@@ -50,6 +50,7 @@ module cpu (
   reg        ID_EX_mem_read;  // will be used in MEM stage
   reg        ID_EX_mem_to_reg;  // will be used in WB stage
   reg        ID_EX_reg_write;  // will be used in WB stage
+  reg        ID_EX_is_ecall;  // will be used in WB stage
   // From others
   reg [31:0] ID_EX_inst;  // will be used in EX stage
   reg [31:0] ID_EX_rs1_data;
@@ -58,8 +59,6 @@ module cpu (
   reg [10:0] ID_EX_ALU_ctrl_unit_input;
   reg [ 4:0] ID_EX_rd;
   reg [31:0] ID_EX_PC;
-
-  reg        ID_EX_is_halted;
 
   /***** EX/MEM pipeline registers *****/
   // From the control unit
@@ -73,7 +72,6 @@ module cpu (
   reg [31:0] EX_MEM_dmem_data;
   reg [ 4:0] EX_MEM_rd;
   reg [31:0] EX_MEM_pc_imm;
-
   reg        EX_MEM_is_halted;
 
   /***** MEM/WB pipeline registers *****/
@@ -86,7 +84,6 @@ module cpu (
   reg [31:0] MEM_WB_alu_out;
   reg [ 4:0] MEM_WB_rd;  // write address(rd) on register
   reg [31:0] MEM_WB_mem_dout;
-
   reg        MEM_WB_is_halted;
 
 
@@ -133,9 +130,6 @@ module cpu (
 
   // mux for is_ecall
   assign rf_rs1 = is_ecall ? 17 : IF_ID_inst[19:15];
-
-  // caculate is_halted
-  assign is_halted_ID = (10 == rs1_dout);
 
   // ---------- Register File ----------
   RegisterFile reg_file (
@@ -187,7 +181,7 @@ module cpu (
       ID_EX_rd <= 0;
       ID_EX_reg_write <= 0;
       ID_EX_mem_to_reg <= 0;
-      ID_EX_is_halted <= 0;
+      ID_EX_is_ecall <= 0;
 
     end else begin
       /* used in ex stage */
@@ -198,6 +192,7 @@ module cpu (
       ID_EX_imm <= imm;
       ID_EX_PC <= IF_ID_PC;
       ID_EX_ALU_ctrl_unit_input <= {IF_ID_inst[30], IF_ID_inst[14:12], IF_ID_inst[6:0]};
+      ID_EX_is_ecall <= is_ecall;
 
       /* used in mem stage */
       ID_EX_mem_write <= mem_write;
@@ -208,7 +203,6 @@ module cpu (
       ID_EX_reg_write <= write_enable;
       ID_EX_mem_to_reg <= mem_to_reg;
 
-      ID_EX_is_halted <= is_halted_ID;
 
     end
   end
@@ -266,6 +260,7 @@ module cpu (
   // ---------- Forwarding Unit ----------
   ForwardingUnit forwarding_unit (
       .ID_EX_inst      (ID_EX_inst),
+      .ID_EX_is_ecall  (ID_EX_is_ecall),
       .EX_MEM_rd       (EX_MEM_rd),
       .MEM_WB_rd       (MEM_WB_rd),
       .EX_MEM_reg_write(EX_MEM_reg_write),
@@ -300,8 +295,7 @@ module cpu (
       EX_MEM_rd <= ID_EX_rd;
       EX_MEM_reg_write <= ID_EX_reg_write;
       EX_MEM_mem_to_reg <= ID_EX_mem_to_reg;
-      EX_MEM_is_halted <= ID_EX_is_halted;
-
+      EX_MEM_is_halted <= ID_EX_is_ecall && (alu_result == 0);
     end
   end
 
