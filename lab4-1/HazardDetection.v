@@ -18,7 +18,8 @@ module HazardDetection (
 
   assign stall = ID_EX_mem_read && (
     (IF_ID_rs1 == ID_EX_rd && use_rs1) ||
-    (IF_ID_rs2 == ID_EX_rd && use_rs2)) ||
+    (IF_ID_rs2 == ID_EX_rd && use_rs2) ||
+    (is_ecall && IF_ID_rs1 == EX_MEM_rd)) ||
     is_ecall && IF_ID_rs1 == ID_EX_rd && ID_EX_reg_write;
 
   always @(*) begin
