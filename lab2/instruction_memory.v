@@ -31,7 +31,7 @@ module instruction_memory #(
       // DO NOT TOUCH COMMENT ABOVE
 
       // Provide path of the file including instructions with binary format
-      $readmemh("./loop_mem.txt", mem);
+      $readmemh("./student_tb/non-controlflow_mem.txt", mem);
     end
   end
 
