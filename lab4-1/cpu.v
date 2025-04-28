@@ -255,7 +255,6 @@ module cpu (
       .EX_MEM_rd       (EX_MEM_rd),         // input
       .ID_EX_mem_read  (ID_EX_mem_read),    // input
       .ID_EX_reg_write (ID_EX_reg_write),   // input
-      .EX_MEM_reg_write(EX_MEM_reg_write),  // input
       .stall           (is_stall)           // output
   );
 
