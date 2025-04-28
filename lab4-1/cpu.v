@@ -32,8 +32,8 @@ module cpu (
   wire is_ecall;
   wire bcond;
 
-  wire [1:0] forward_A, forward_B;
-  wire        forward_ecall;
+  wire [1:0] forward_A, forward_B, forward_ecall;
+  wire [31:0] ecall_rs1_forwarded;
 
   /***** Register declarations *****/
   // You need to modify the width of registers
@@ -202,9 +202,17 @@ module cpu (
       ID_EX_rd <= IF_ID_inst[11:7];
       ID_EX_reg_write <= write_enable;
       ID_EX_mem_to_reg <= mem_to_reg;
-      ID_EX_is_halted <= is_ecall && ((forward_ecall ? EX_MEM_alu_out : rs1_dout) == 10);
+      ID_EX_is_halted <= is_ecall && (ecall_rs1_forwarded == 10);
     end
   end
+
+  mux32_2 ecall_forward_mux (
+    .select(forward_ecall),
+    .w0(rs1_dout),
+    .w1(rd_din),
+    .w2(EX_MEM_alu_out),
+    .dout(ecall_rs1_forwarded)
+  );
 
   // ---------- add PC + imm
   assign pc_imm = ID_EX_PC + ID_EX_imm;
