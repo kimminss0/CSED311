@@ -26,14 +26,17 @@ module cpu (
   wire [3:0] alu_op;
   wire [4:0] rf_rs1;
 
-  wire [31:0] pc_imm, pc_4;
-
   wire mem_read, mem_to_reg, mem_write, alu_src, write_enable, pc_to_reg;
   wire is_ecall;
+
+  wire [31:0] pc_BTB, pc_imm, pc_4, pc_A, alu_result_or_pc_4;
   wire bcond;
+  wire flush_IF_ID, flush_ID_EX;
 
   wire [1:0] forward_A, forward_B, forward_ecall;
   wire [31:0] ecall_rs1_forwarded;
+
+  wire dummy;
 
   /***** Register declarations *****/
   // You need to modify the width of registers
@@ -51,6 +54,7 @@ module cpu (
   reg         ID_EX_mem_read;  // will be used in MEM stage
   reg         ID_EX_mem_to_reg;  // will be used in WB stage
   reg         ID_EX_reg_write;  // will be used in WB stage
+  reg         ID_EX_pc_to_reg;
   // From others
   reg  [31:0] ID_EX_inst;  // will be used in EX stage
   reg  [31:0] ID_EX_rs1_data;
@@ -71,7 +75,6 @@ module cpu (
   reg  [31:0] EX_MEM_alu_out;
   reg  [31:0] EX_MEM_dmem_data;
   reg  [ 4:0] EX_MEM_rd;
-  reg  [31:0] EX_MEM_pc_imm;
   reg         EX_MEM_is_halted;
   reg         ID_EX_is_halted;
 
@@ -95,18 +98,30 @@ module cpu (
       .clk       (clk),         // input
       .next_pc   (next_pc),     // input
       .current_pc(current_pc),  // output
-      .is_stall  (is_stall)
+      .is_stall  (flush_IF_ID ? 0 : is_stall)
   );
 
   // PC add 4
   assign pc_4 = current_pc + 4;
 
-  // mux PC_4, PC_imm
-  mux32 pc_mux (
-      .select(0),  //controlflow가 없으므로 일단 pc+4로 고정해둠
-      .w0(pc_4),
-      .w1(EX_MEM_pc_imm),
-      .dout(next_pc)
+  // PC from BTB
+  assign pc_BTB = current_pc + 4; // predict to PC+4
+
+  BranchHazardUnit bunit (
+      .IF_opcode(instruction[6:0]),      
+      .IF_ID_opcode(IF_ID_inst[6:0]),
+      .ID_EX_opcode(ID_EX_inst[6:0]),
+      .IF_pc(current_pc),               // pc from IF stage
+      .IF_ID_pc(IF_ID_PC),              // pc from ID stage
+      .ID_EX_pc(ID_EX_PC),              // pc from EX stage
+      .pc_BTB(pc_BTB),                  // BLT output
+      .pc_4(pc_4),                      // pc+4
+      .pc_imm(pc_imm),                  // pc+imm
+      .pc_A(pc_A),                      // alu_result
+      .bcond(bcond),                    // (rs1_dout == rs2_dout) from ID stage
+      .flush_IF_ID(flush_IF_ID),        // -> insert non-op to IF_ID regi
+      .flush_ID_EX(flush_ID_EX),        // -> off all write signal on IF_EX regi
+      .next_pc(next_pc)
   );
 
   // ---------- Instruction Memory ----------
@@ -122,8 +137,10 @@ module cpu (
     if (reset) begin
       IF_ID_inst <= 0;
       IF_ID_PC   <= 0;
+    end else if (flush_IF_ID) begin
+      IF_ID_inst <= 0;  //use 0 as non-op, ControlUnit에서 모든 write에 대한 control signal이 0임
     end else if (!is_stall) begin
-      IF_ID_inst <= instruction;
+      IF_ID_inst <= instruction; 
       IF_ID_PC   <= current_pc;
     end
     // On else, IF_ID_inst doesn't not change
@@ -146,7 +163,6 @@ module cpu (
       .print_reg   (print_reg)
   );
 
-
   // ---------- Control Unit ----------
   ControlUnit ctrl_unit (
       .part_of_inst(IF_ID_inst[6:0]),  // input
@@ -168,7 +184,7 @@ module cpu (
 
   // Update ID/EX pipeline registers here
   always @(posedge clk) begin
-    if (reset) begin
+    if (reset || is_stall) begin
       /* used in ex stage */
       ID_EX_inst <= 0;
       ID_EX_alu_src <= 0;
@@ -183,6 +199,7 @@ module cpu (
       ID_EX_reg_write <= 0;
       ID_EX_mem_to_reg <= 0;
       ID_EX_is_halted <= 0;
+      ID_EX_pc_to_reg <= 0;
 
     end else begin
       /* used in ex stage */
@@ -193,16 +210,17 @@ module cpu (
       ID_EX_imm <= imm;
       ID_EX_PC <= IF_ID_PC;
       ID_EX_ALU_ctrl_unit_input <= {IF_ID_inst[30], IF_ID_inst[14:12], IF_ID_inst[6:0]};
+      ID_EX_pc_to_reg <= pc_to_reg;
 
       /* used in mem stage */
-      ID_EX_mem_write <= mem_write;
+      ID_EX_mem_write <= flush_ID_EX ? 0 : mem_write; // flush에 의해 write signal -> 0
       ID_EX_mem_read <= mem_read;
 
       /* used in wb stage */
       ID_EX_rd <= IF_ID_inst[11:7];
-      ID_EX_reg_write <= write_enable;
+      ID_EX_reg_write <= flush_ID_EX ? 0 : write_enable; // flush에 의해 write signal -> 0
       ID_EX_mem_to_reg <= mem_to_reg;
-      ID_EX_is_halted <= is_ecall && (ecall_rs1_forwarded == 10);
+      ID_EX_is_halted <= flush_ID_EX ? 0 : ( is_ecall && (ecall_rs1_forwarded == 10) );  // flush halt signal
     end
   end
 
@@ -214,21 +232,10 @@ module cpu (
     .dout(ecall_rs1_forwarded)
   );
 
-  // ---------- add PC + imm
-  assign pc_imm = ID_EX_PC + ID_EX_imm;
-
   // ---------- ALU Control Unit ----------
   ALUControlUnit alu_ctrl_unit (
       .part_of_inst(ID_EX_ALU_ctrl_unit_input),  // input
       .alu_op      (alu_op)                      // output
-  );
-
-  // ---------- ALU rs2 mux
-  mux32 alu_rs2_mux (
-      .select(ID_EX_alu_src),
-      .w0(alu_rs2),
-      .w1(ID_EX_imm),
-      .dout(alu_rs2_or_imm)
   );
 
   mux32_2 alu_rs1_forward_mux (
@@ -247,6 +254,16 @@ module cpu (
       .dout(alu_rs2)
   );
 
+  //assign bcond = (alu_rs1 == alu_rs2); //구현의 단순화를 위해 bcond를 EX stage에서 생성
+
+  // ---------- ALU rs2 mux
+  mux32 alu_rs2_mux (
+      .select(ID_EX_alu_src),
+      .w0(alu_rs2),
+      .w1(ID_EX_imm),
+      .dout(alu_rs2_or_imm)
+  );
+
   // ---------- ALU ----------
   ALU alu (
       .alu_op    (alu_op),          // input
@@ -254,6 +271,18 @@ module cpu (
       .alu_in_2  (alu_rs2_or_imm),  // input
       .alu_result(alu_result),      // output
       .alu_bcond (bcond)            // output
+  );
+
+  assign pc_A = alu_result; // A(pc) + imm, 편의를 위해 ALU와 분리함
+
+  // ---------- add PC + imm
+  assign pc_imm = ID_EX_PC + ID_EX_imm;
+
+  mux32 alu_result_pc_4_mux (
+      .select(ID_EX_pc_to_reg),
+      .w0(alu_result),
+      .w1(ID_EX_PC+4),
+      .dout(alu_result_or_pc_4)
   );
 
   // ---------- Hazard Detection ----------
@@ -287,17 +316,14 @@ module cpu (
       EX_MEM_mem_write <= 0;
       EX_MEM_rd <= 0;
       EX_MEM_reg_write <= 0;
-      EX_MEM_pc_imm <= 0;
       EX_MEM_is_halted <= 0;
     end else begin
       /* used in mem stage */
-      EX_MEM_alu_out <= alu_result;
+      EX_MEM_alu_out <= alu_result_or_pc_4;
       EX_MEM_dmem_data <= alu_rs2;
 
       EX_MEM_mem_read <= ID_EX_mem_read;
       EX_MEM_mem_write <= ID_EX_mem_write;
-
-      EX_MEM_pc_imm <= pc_imm;  // jal, branch
 
       /* used in wb stage */
       // EX_MEM_alu_out is also used

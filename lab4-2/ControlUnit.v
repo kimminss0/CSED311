@@ -34,9 +34,9 @@ module ControlUnit (
 
     //write_enable
     case (opcode)
-      `BRANCH, `STORE, `ECALL
-             :  write_enable = 0;
-      default:  write_enable = 1;
+      `ARITHMETIC, `ARITHMETIC_IMM, `LOAD, `JALR, `JAL
+             :  write_enable = 1;
+      default:  write_enable = 0;
     endcase
 
     //pc_to_reg : zero -> normal , one -> PC+4 to register write input

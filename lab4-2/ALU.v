@@ -31,6 +31,5 @@ module ALU (
       `BGE:    alu_bcond = $signed(alu_result) >= 0;
       default: alu_bcond = 0;
     endcase
-    alu_bcond = alu_zero; // temporary
   end
 endmodule
