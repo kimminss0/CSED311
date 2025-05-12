@@ -2,7 +2,6 @@
 
 module BranchHazardUnit (
     input      [ 6:0] IF_opcode,
-    input      [ 6:0] IF_ID_opcode,
     input      [ 6:0] ID_EX_opcode,
     input      [31:0] IF_pc,         //pc on IF stage
     input      [31:0] IF_ID_pc,      //pc on ID stage

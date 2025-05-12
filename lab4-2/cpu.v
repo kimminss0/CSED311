@@ -7,6 +7,7 @@
 // (e.g., port declarations, remove modules, define new modules, ...)
 // 3. You might need to describe combinational logics to drive them into the module (e.g., mux, and, or, ...)
 // 4. `include files if required
+`include "opcodes.v"
 
 module cpu (
     input         reset,         // positive reset signal
@@ -32,6 +33,12 @@ module cpu (
   wire [31:0] pc_BTB, pc_imm, pc_4, pc_A, alu_result_or_pc_4;
   wire bcond;
   wire flush_IF_ID, flush_ID_EX;
+  wire [4:0] pht_idx;
+
+  wire branch_taken;
+  wire [31:0] predicted_branch_target = ID_EX_PC;
+  wire [31:0] actual_branch_target = flush_ID_EX ? next_pc : ID_EX_PC;
+  wire actual_branch_taken = ID_EX_inst[6:0] == `JAL || ID_EX_inst[6:0] == `JALR || (bcond && ID_EX_inst[6:0] == `BRANCH);
 
   wire [1:0] forward_A, forward_B, forward_ecall;
   wire [31:0] ecall_rs1_forwarded;
@@ -45,7 +52,9 @@ module cpu (
   // 2. You might not need registers described below
   /***** IF/ID pipeline registers *****/
   reg  [31:0] IF_ID_inst;  // will be used in ID stage
+  reg  [ 4:0] IF_ID_pht_idx;
   reg  [31:0] IF_ID_PC;
+  reg         IF_ID_branch_taken;
   /***** ID/EX pipeline registers *****/
   // From the control unit
   reg         ID_EX_alu_op;  // will be used in EX stage
@@ -59,6 +68,7 @@ module cpu (
   reg  [31:0] ID_EX_inst;  // will be used in EX stage
   reg  [31:0] ID_EX_rs1_data;
   reg  [31:0] ID_EX_rs2_data;
+  reg  [ 4:0] ID_EX_pht_idx;
   reg  [31:0] ID_EX_imm;
   reg  [10:0] ID_EX_ALU_ctrl_unit_input;
   reg  [ 4:0] ID_EX_rd;
@@ -102,14 +112,10 @@ module cpu (
   );
 
   // PC add 4
-  assign pc_4   = current_pc + 4;
-
-  // PC from BTB
-  assign pc_BTB = current_pc + 4;  // predict to PC+4
+  assign pc_4 = current_pc + 4;
 
   BranchHazardUnit bunit (
       .IF_opcode   (instruction[6:0]),
-      .IF_ID_opcode(IF_ID_inst[6:0]),
       .ID_EX_opcode(ID_EX_inst[6:0]),
       .IF_pc       (current_pc),        // pc from IF stage
       .IF_ID_pc    (IF_ID_PC),          // pc from ID stage
@@ -124,6 +130,23 @@ module cpu (
       .next_pc     (next_pc)
   );
 
+  BranchPrediction bpred (
+      .opcode(instruction[6:0]),
+      .ID_EX_opcode(ID_EX_inst[6:0]),
+      .ID_EX_pc(ID_EX_PC),
+      .ID_EX_pht_idx(ID_EX_pht_idx),
+      .pc(current_pc),
+      .pc_4(pc_4),
+      .predicted_branch_target(predicted_branch_target),
+      .actual_branch_target(actual_branch_target),
+      .actual_taken(actual_branch_taken),
+      .reset(reset),
+      .clk(clk),
+      .is_taken(branch_taken),
+      .pc_predicted(pc_BTB),
+      .pht_idx(pht_idx)
+  );
+
   // ---------- Instruction Memory ----------
   InstMemory imem (
       .reset(reset),   // input
@@ -136,12 +159,16 @@ module cpu (
   always @(posedge clk) begin
     if (reset) begin
       IF_ID_inst <= 0;
-      IF_ID_PC   <= 0;
+      IF_ID_PC <= 0;
+      IF_ID_pht_idx <= 0;
+      IF_ID_branch_taken <= 0;
     end else if (flush_IF_ID) begin
       IF_ID_inst <= 0;  //use 0 as non-op, ControlUnit에서 모든 write에 대한 control signal이 0임
     end else if (!is_stall) begin
       IF_ID_inst <= instruction;
-      IF_ID_PC   <= current_pc;
+      IF_ID_PC <= current_pc;
+      IF_ID_pht_idx <= pht_idx;
+      IF_ID_branch_taken <= branch_taken;
     end
     // On else, IF_ID_inst doesn't not change
   end
@@ -190,6 +217,7 @@ module cpu (
       ID_EX_alu_src <= 0;
       ID_EX_rs1_data <= 0;
       ID_EX_rs2_data <= 0;
+      ID_EX_pht_idx <= 0;
       ID_EX_imm <= 0;
       ID_EX_PC <= 0;
       ID_EX_ALU_ctrl_unit_input <= 0;
@@ -207,6 +235,7 @@ module cpu (
       ID_EX_alu_src <= alu_src;
       ID_EX_rs1_data <= rs1_dout;
       ID_EX_rs2_data <= rs2_dout;
+      ID_EX_pht_idx <= IF_ID_pht_idx;
       ID_EX_imm <= imm;
       ID_EX_PC <= IF_ID_PC;
       ID_EX_ALU_ctrl_unit_input <= {IF_ID_inst[30], IF_ID_inst[14:12], IF_ID_inst[6:0]};
