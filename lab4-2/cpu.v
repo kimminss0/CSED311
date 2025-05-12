@@ -36,7 +36,7 @@ module cpu (
   wire [1:0] forward_A, forward_B, forward_ecall;
   wire [31:0] ecall_rs1_forwarded;
 
-  wire dummy;
+  wire        dummy;
 
   /***** Register declarations *****/
   // You need to modify the width of registers
@@ -94,34 +94,34 @@ module cpu (
   // ---------- Update program counter ----------
   // PC must be updated on the rising edge (positive edge) of the clock.
   PC pc (
-      .reset     (reset),       // input (Use reset to initialize PC. Initial value must be 0)
-      .clk       (clk),         // input
-      .next_pc   (next_pc),     // input
+      .reset(reset),  // input (Use reset to initialize PC. Initial value must be 0)
+      .clk(clk),  // input
+      .next_pc(next_pc),  // input
       .current_pc(current_pc),  // output
-      .is_stall  (flush_IF_ID ? 0 : is_stall)
+      .is_stall(flush_IF_ID ? 0 : is_stall)
   );
 
   // PC add 4
-  assign pc_4 = current_pc + 4;
+  assign pc_4   = current_pc + 4;
 
   // PC from BTB
-  assign pc_BTB = current_pc + 4; // predict to PC+4
+  assign pc_BTB = current_pc + 4;  // predict to PC+4
 
   BranchHazardUnit bunit (
-      .IF_opcode(instruction[6:0]),      
+      .IF_opcode   (instruction[6:0]),
       .IF_ID_opcode(IF_ID_inst[6:0]),
       .ID_EX_opcode(ID_EX_inst[6:0]),
-      .IF_pc(current_pc),               // pc from IF stage
-      .IF_ID_pc(IF_ID_PC),              // pc from ID stage
-      .ID_EX_pc(ID_EX_PC),              // pc from EX stage
-      .pc_BTB(pc_BTB),                  // BLT output
-      .pc_4(pc_4),                      // pc+4
-      .pc_imm(pc_imm),                  // pc+imm
-      .pc_A(pc_A),                      // alu_result
-      .bcond(bcond),                    // (rs1_dout == rs2_dout) from ID stage
-      .flush_IF_ID(flush_IF_ID),        // -> insert non-op to IF_ID regi
-      .flush_ID_EX(flush_ID_EX),        // -> off all write signal on IF_EX regi
-      .next_pc(next_pc)
+      .IF_pc       (current_pc),        // pc from IF stage
+      .IF_ID_pc    (IF_ID_PC),          // pc from ID stage
+      .ID_EX_pc    (ID_EX_PC),          // pc from EX stage
+      .pc_BTB      (pc_BTB),            // BLT output
+      .pc_4        (pc_4),              // pc+4
+      .pc_imm      (pc_imm),            // pc+imm
+      .pc_A        (pc_A),              // alu_result
+      .bcond       (bcond),             // (rs1_dout == rs2_dout) from ID stage
+      .flush_IF_ID (flush_IF_ID),       // -> insert non-op to IF_ID regi
+      .flush_ID_EX (flush_ID_EX),       // -> off all write signal on IF_EX regi
+      .next_pc     (next_pc)
   );
 
   // ---------- Instruction Memory ----------
@@ -140,7 +140,7 @@ module cpu (
     end else if (flush_IF_ID) begin
       IF_ID_inst <= 0;  //use 0 as non-op, ControlUnit에서 모든 write에 대한 control signal이 0임
     end else if (!is_stall) begin
-      IF_ID_inst <= instruction; 
+      IF_ID_inst <= instruction;
       IF_ID_PC   <= current_pc;
     end
     // On else, IF_ID_inst doesn't not change
@@ -213,23 +213,23 @@ module cpu (
       ID_EX_pc_to_reg <= pc_to_reg;
 
       /* used in mem stage */
-      ID_EX_mem_write <= flush_ID_EX ? 0 : mem_write; // flush에 의해 write signal -> 0
+      ID_EX_mem_write <= flush_ID_EX ? 0 : mem_write;  // flush에 의해 write signal -> 0
       ID_EX_mem_read <= mem_read;
 
       /* used in wb stage */
       ID_EX_rd <= IF_ID_inst[11:7];
-      ID_EX_reg_write <= flush_ID_EX ? 0 : write_enable; // flush에 의해 write signal -> 0
+      ID_EX_reg_write <= flush_ID_EX ? 0 : write_enable;  // flush에 의해 write signal -> 0
       ID_EX_mem_to_reg <= mem_to_reg;
       ID_EX_is_halted <= flush_ID_EX ? 0 : ( is_ecall && (ecall_rs1_forwarded == 10) );  // flush halt signal
     end
   end
 
   mux32_2 ecall_forward_mux (
-    .select(forward_ecall),
-    .w0(rs1_dout),
-    .w1(rd_din),
-    .w2(EX_MEM_alu_out),
-    .dout(ecall_rs1_forwarded)
+      .select(forward_ecall),
+      .w0(rs1_dout),
+      .w1(rd_din),
+      .w2(EX_MEM_alu_out),
+      .dout(ecall_rs1_forwarded)
   );
 
   // ---------- ALU Control Unit ----------
@@ -273,7 +273,7 @@ module cpu (
       .alu_bcond (bcond)            // output
   );
 
-  assign pc_A = alu_result; // A(pc) + imm, 편의를 위해 ALU와 분리함
+  assign pc_A   = alu_result;  // A(pc) + imm, 편의를 위해 ALU와 분리함
 
   // ---------- add PC + imm
   assign pc_imm = ID_EX_PC + ID_EX_imm;
@@ -281,18 +281,18 @@ module cpu (
   mux32 alu_result_pc_4_mux (
       .select(ID_EX_pc_to_reg),
       .w0(alu_result),
-      .w1(ID_EX_PC+4),
+      .w1(ID_EX_PC + 4),
       .dout(alu_result_or_pc_4)
   );
 
   // ---------- Hazard Detection ----------
   HazardDetection hazard_detection (
-      .IF_ID_inst      (IF_ID_inst),        // input
-      .ID_EX_rd        (ID_EX_rd),          // input
-      .EX_MEM_rd       (EX_MEM_rd),         // input
-      .ID_EX_mem_read  (ID_EX_mem_read),    // input
-      .ID_EX_reg_write (ID_EX_reg_write),   // input
-      .stall           (is_stall)           // output
+      .IF_ID_inst     (IF_ID_inst),       // input
+      .ID_EX_rd       (ID_EX_rd),         // input
+      .EX_MEM_rd      (EX_MEM_rd),        // input
+      .ID_EX_mem_read (ID_EX_mem_read),   // input
+      .ID_EX_reg_write(ID_EX_reg_write),  // input
+      .stall          (is_stall)          // output
   );
 
   // ---------- Forwarding Unit ----------
