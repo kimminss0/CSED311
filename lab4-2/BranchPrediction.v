@@ -18,7 +18,6 @@ module BranchPrediction #(
     input                      actual_taken,
     input                      reset,                    // positive reset signal
     input                      clk,
-    output                     is_taken,
     output [             31:0] pc_predicted,
     output [BTB_IDX_WIDTH-1:0] pht_idx
 );

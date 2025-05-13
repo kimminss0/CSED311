@@ -35,7 +35,6 @@ module cpu (
   wire flush_IF_ID, flush_ID_EX;
   wire [4:0] pht_idx;
 
-  wire branch_taken;
   wire [31:0] predicted_branch_target = ID_EX_PC;
   wire [31:0] actual_branch_target = flush_ID_EX ? next_pc : ID_EX_PC;
   wire actual_branch_taken = ID_EX_inst[6:0] == `JAL || ID_EX_inst[6:0] == `JALR || (bcond && ID_EX_inst[6:0] == `BRANCH);
@@ -142,7 +141,6 @@ module cpu (
       .actual_taken(actual_branch_taken),
       .reset(reset),
       .clk(clk),
-      .is_taken(branch_taken),
       .pc_predicted(pc_BTB),
       .pht_idx(pht_idx)
   );
@@ -168,7 +166,6 @@ module cpu (
       IF_ID_inst <= instruction;
       IF_ID_PC <= current_pc;
       IF_ID_pht_idx <= pht_idx;
-      IF_ID_branch_taken <= branch_taken;
     end
     // On else, IF_ID_inst doesn't not change
   end
