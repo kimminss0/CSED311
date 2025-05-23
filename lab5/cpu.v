@@ -35,6 +35,12 @@ module cpu (
   wire flush_IF_ID, flush_ID_EX;
   wire [4:0] pht_idx;
 
+  reg cache_is_input_valid;
+  reg is_cache_stall;
+  wire cache_is_output_valid;
+  wire cache_is_ready;
+  wire cache_is_hit;
+
   wire [31:0] predicted_branch_target = ID_EX_PC;
   wire [31:0] actual_branch_target = flush_ID_EX ? next_pc : ID_EX_PC;
   wire actual_branch_taken = ID_EX_inst[6:0] == `JAL || ID_EX_inst[6:0] == `JALR || (bcond && ID_EX_inst[6:0] == `BRANCH);
@@ -74,6 +80,7 @@ module cpu (
   reg  [31:0] ID_EX_PC;
 
   /***** EX/MEM pipeline registers *****/
+  reg  [31:0] EX_MEM_inst;
   // From the control unit
   reg         EX_MEM_mem_write;  // will be used in MEM stage
   reg         EX_MEM_mem_read;  // will be used in MEM stage
@@ -88,6 +95,7 @@ module cpu (
   reg         ID_EX_is_halted;
 
   /***** MEM/WB pipeline registers *****/
+  reg  [31:0] MEM_WB_inst;
   // From the control unit
   reg         MEM_WB_mem_to_reg;  // will be used in WB stage
   reg         MEM_WB_reg_write;  // will be used in WB stage
@@ -107,7 +115,7 @@ module cpu (
       .clk(clk),  // input
       .next_pc(next_pc),  // input
       .current_pc(current_pc),  // output
-      .is_stall(flush_IF_ID ? 0 : is_stall)
+      .is_stall(is_cache_stall ? 1 : (flush_IF_ID ? 0 : (is_stall)))
   );
 
   // PC add 4
@@ -162,7 +170,7 @@ module cpu (
       IF_ID_branch_taken <= 0;
     end else if (flush_IF_ID) begin
       IF_ID_inst <= 0;  //use 0 as non-op, ControlUnit에서 모든 write에 대한 control signal이 0임
-    end else if (!is_stall) begin
+    end else if (!is_stall && !is_cache_stall) begin
       IF_ID_inst <= instruction;
       IF_ID_PC <= current_pc;
       IF_ID_pht_idx <= pht_idx;
@@ -208,7 +216,7 @@ module cpu (
 
   // Update ID/EX pipeline registers here
   always @(posedge clk) begin
-    if (reset || is_stall) begin
+    if (reset || (!is_cache_stall && is_stall)) begin
       /* used in ex stage */
       ID_EX_inst <= 0;
       ID_EX_alu_src <= 0;
@@ -226,7 +234,7 @@ module cpu (
       ID_EX_is_halted <= 0;
       ID_EX_pc_to_reg <= 0;
 
-    end else begin
+    end else if (!is_cache_stall) begin
       /* used in ex stage */
       ID_EX_inst <= IF_ID_inst;
       ID_EX_alu_src <= alu_src;
@@ -336,6 +344,7 @@ module cpu (
   // Update EX/MEM pipeline registers here
   always @(posedge clk) begin
     if (reset) begin
+      EX_MEM_inst <= 0;
       EX_MEM_alu_out <= 0;
       EX_MEM_dmem_data <= 0;
       EX_MEM_mem_read <= 0;
@@ -343,7 +352,8 @@ module cpu (
       EX_MEM_rd <= 0;
       EX_MEM_reg_write <= 0;
       EX_MEM_is_halted <= 0;
-    end else begin
+    end else if (!is_cache_stall) begin
+      EX_MEM_inst <= ID_EX_inst;
       /* used in mem stage */
       EX_MEM_alu_out <= alu_result_or_pc_4;
       EX_MEM_dmem_data <= alu_rs2;
@@ -361,25 +371,46 @@ module cpu (
   end
 
   // ---------- Data Memory ----------
-  DataMemory dmem (
-      .reset    (reset),             // input
-      .clk      (clk),               // input
-      .addr     (EX_MEM_alu_out),    // input
-      .din      (EX_MEM_dmem_data),  // input
-      .mem_read (EX_MEM_mem_read),   // input
-      .mem_write(EX_MEM_mem_write),  // input
-      .dout     (mem_dout)           // output
+  Cache dcache (
+      .reset          (reset),                     // input
+      .clk            (clk),                       // input
+      .is_input_valid (cache_is_input_valid),      // input
+      .addr           (EX_MEM_alu_out),            // input
+      .din            (EX_MEM_dmem_data),          // input
+      .mem_rw         (EX_MEM_mem_write ? 1 : 0),  // input
+      .is_output_valid(cache_is_output_valid),     // output
+      .dout           (mem_dout),                  // output
+      .is_ready       (cache_is_ready),            // output
+      .is_hit         (cache_is_hit)               // output
   );
+
+  always @(*) begin
+    if (cache_is_output_valid && cache_is_ready) begin
+      cache_is_input_valid = (ID_EX_mem_read || ID_EX_mem_write);
+    end else begin
+      cache_is_input_valid = (EX_MEM_mem_read || EX_MEM_mem_write);
+    end
+  end
+
+  always @(*) begin
+    if (EX_MEM_mem_read || EX_MEM_mem_write) begin
+      is_cache_stall = !(cache_is_output_valid && cache_is_hit && cache_is_ready);
+    end else begin
+      is_cache_stall = 0;
+    end
+  end
 
   // Update MEM/WB pipeline registers here
   always @(posedge clk) begin
     if (reset) begin
+      MEM_WB_inst <= 0;
       MEM_WB_rd <= 0;
       MEM_WB_alu_out <= 0;
       MEM_WB_reg_write <= 0;
       MEM_WB_mem_dout <= 0;
       MEM_WB_is_halted <= 0;
-    end else begin
+    end else if (!is_cache_stall) begin
+      MEM_WB_inst <= EX_MEM_inst;
       MEM_WB_rd <= EX_MEM_rd;
       MEM_WB_alu_out <= EX_MEM_alu_out;
       MEM_WB_reg_write <= EX_MEM_reg_write;
